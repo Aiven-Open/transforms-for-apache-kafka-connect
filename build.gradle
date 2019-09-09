@@ -1,0 +1,81 @@
+/*
+ * Copyright 2019 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    // https://docs.gradle.org/current/userguide/java_library_plugin.html
+    id 'java-library'
+
+    // https://docs.gradle.org/current/userguide/distribution_plugin.html
+    id 'distribution'
+
+    // https://docs.gradle.org/current/userguide/checkstyle_plugin.html
+    id 'checkstyle'
+}
+
+repositories {
+    jcenter()
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+ext {
+    kafkaVersion = "2.0.1"
+}
+
+distributions {
+    main {
+        contents {
+            from jar
+            from configurations.runtimeClasspath
+        }
+    }
+}
+
+dependencies {
+    compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
+
+    implementation "org.slf4j:slf4j-api:1.7.25"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.5.1"
+    testImplementation "org.hamcrest:hamcrest:2.1"
+    testImplementation "org.apache.kafka:connect-api:$kafkaVersion"
+    testRuntime "org.apache.logging.log4j:log4j-slf4j-impl:2.12.1"
+}
+
+checkstyle {
+    toolVersion "8.21"
+}
+
+test {
+    useJUnitPlatform {
+        includeEngines 'junit-jupiter'
+    }
+}
+
+processResources {
+    filesMatching('aiven-kafka-connect-transforms-version.properties') {
+        expand(version: version)
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                'Version': "${getArchiveVersion()}"
+        )
+    }
+}
