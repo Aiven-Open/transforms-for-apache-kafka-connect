@@ -25,6 +25,7 @@ Here's an example of this transformation configuration:
 
 ```properties
 transforms=ExtractTopicFromValueField
+transforms.ExtractTopicFromValueField.type=io.aiven.kafka.connect.transforms.ExtractTopic$Value
 transforms.ExtractTopicFromValueField.field.name=inner_field_name
 ```
 
