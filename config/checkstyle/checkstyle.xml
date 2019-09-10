@@ -27,6 +27,11 @@
 
 <!-- See http://checkstyle.sourceforge.net/config.html#Checker -->
 <module name="Checker">
+    <!-- See http://checkstyle.sourceforge.net/config_filters.html#SuppressionFilter -->
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/suppressions.xml" default="checkstyle/suppressions.xml"/>
+    </module>
+
     <property name="charset" value="UTF-8"/>
     <!--    <property name="severity" value="warning"/>-->
     <property name="localeLanguage" value="en"/>

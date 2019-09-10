@@ -23,6 +23,9 @@ plugins {
 
     // https://docs.gradle.org/current/userguide/checkstyle_plugin.html
     id 'checkstyle'
+
+    // https://docs.gradle.org/current/userguide/idea_plugin.html
+    id 'idea'
 }
 
 repositories {
@@ -34,6 +37,8 @@ targetCompatibility = JavaVersion.VERSION_1_8
 
 ext {
     kafkaVersion = "2.0.1"
+
+    testcontainersVersion = "1.12.1"
 }
 
 distributions {
@@ -45,6 +50,27 @@ distributions {
     }
 }
 
+sourceSets {
+    integrationTest {
+        java.srcDir file('src/integration-test/java')
+        resources.srcDir file('src/integration-test/resources')
+        compileClasspath += sourceSets.main.output + configurations.testRuntime
+        runtimeClasspath += output + compileClasspath
+    }
+}
+
+idea {
+    module {
+        testSourceDirs += project.sourceSets.integrationTest.java.srcDirs
+        testSourceDirs += project.sourceSets.integrationTest.resources.srcDirs
+    }
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom testImplementation
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
 dependencies {
     compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
 
@@ -53,12 +79,47 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter:5.5.1"
     testImplementation "org.hamcrest:hamcrest:2.1"
     testImplementation "org.apache.kafka:connect-api:$kafkaVersion"
+    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+
     testRuntime "org.apache.logging.log4j:log4j-slf4j-impl:2.12.1"
+    testRuntime "org.apache.logging.log4j:log4j-api:2.12.1"
+    testRuntime "org.apache.logging.log4j:log4j-core:2.12.1"
+
+    integrationTestImplementation "org.apache.kafka:connect-api:$kafkaVersion"
+    integrationTestImplementation("org.apache.kafka:connect-runtime:$kafkaVersion") {
+        exclude group: "org.slf4j", module: "slf4j-log4j12"
+    }
+    integrationTestImplementation "org.apache.kafka:connect-json:$kafkaVersion"
+    integrationTestImplementation "org.apache.kafka:connect-transforms:$kafkaVersion"
+
+    integrationTestImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+    integrationTestImplementation "org.testcontainers:kafka:$testcontainersVersion" // this is not Kafka version
+    // Make test utils from 'test' available in 'integration-test'
+    integrationTestImplementation sourceSets.test.output
 }
 
 checkstyle {
     toolVersion "8.21"
 }
+
+task integrationTest(type: Test) {
+    description = 'Runs the integration tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+
+    dependsOn test, distTar
+
+    useJUnitPlatform()
+
+    // Run always.
+    outputs.upToDateWhen { false }
+
+    // Pass the distribution file path to the tests.
+    systemProperty("integration-test.distribution.file.path", distTar.archiveFile.get().asFile.path)
+    systemProperty("integration-test.classes.path", sourceSets.integrationTest.output.classesDirs.getAsPath())
+}
+check.dependsOn integrationTest
 
 test {
     useJUnitPlatform {
