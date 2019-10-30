@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.connect.transforms;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,6 +35,17 @@ import org.slf4j.LoggerFactory;
 
 public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transformation<R> {
     private static final Logger log = LoggerFactory.getLogger(ExtractTopic.class);
+
+    private static final List<Schema.Type> SUPPORTED_TYPES_TO_CONVERT_FROM = Arrays.asList(
+        Schema.Type.INT8,
+        Schema.Type.INT16,
+        Schema.Type.INT32,
+        Schema.Type.INT64,
+        Schema.Type.FLOAT32,
+        Schema.Type.FLOAT64,
+        Schema.Type.BOOLEAN,
+        Schema.Type.STRING
+    );
 
     private ExtractTopicConfig config;
 
@@ -104,29 +117,34 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
             }
         }
 
-        if (Schema.Type.STRING != field.schema().type()) {
-            throw new DataException(fieldName + " schema type in " + dataPlace() + " must be STRING: " + recordStr);
+        if (!SUPPORTED_TYPES_TO_CONVERT_FROM.contains(field.schema().type())) {
+            throw new DataException(fieldName + " schema type in " + dataPlace()
+                + " must be " + SUPPORTED_TYPES_TO_CONVERT_FROM
+                + ": " + recordStr);
         }
 
         final Struct struct = (Struct) value;
-        final String fieldValue = struct.getString(fieldName);
 
-        if (fieldValue == null || "".equals(fieldValue)) {
+        final Optional<String> result = Optional.ofNullable(struct.get(fieldName))
+            .map(Object::toString);
+        if (result.isPresent() && !result.get().equals("")) {
+            return result;
+        } else {
             if (config.skipMissingOrNull()) {
                 return Optional.empty();
             } else {
                 throw new DataException(fieldName + " in " + dataPlace() + " can't be null or empty: " + recordStr);
             }
-        } else {
-            return Optional.of((String) fieldValue);
         }
     }
 
     private Optional<String> getNewTopicWithoutFieldName(final String recordStr,
                                                          final Schema schema,
                                                          final Object value) {
-        if (Schema.Type.STRING != schema.type()) {
-            throw new DataException(dataPlace() + " schema type must be STRING if field name is not specified: "
+        if (!SUPPORTED_TYPES_TO_CONVERT_FROM.contains(schema.type())) {
+            throw new DataException(dataPlace() + " schema type must be "
+                + SUPPORTED_TYPES_TO_CONVERT_FROM
+                + " if field name is not specified: "
                 + recordStr);
         }
 
@@ -138,7 +156,7 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
             }
         }
 
-        return Optional.of((String) value);
+        return Optional.of(value.toString());
     }
 
     public static class Key<R extends ConnectRecord<R>> extends ExtractTopic<R> {

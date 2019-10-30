@@ -50,11 +50,15 @@ abstract class ExtractTopicTest {
 
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
-    void noFieldName_NonString(final boolean skipMissingOrNull) {
-        final SinkRecord originalRecord = record(SchemaBuilder.INT8_SCHEMA, "some");
+    void noFieldName_UnsupportedType(final boolean skipMissingOrNull) {
+        final Schema schema = SchemaBuilder.struct().build();
+        final SinkRecord originalRecord = record(schema, new Struct(schema));
         final Throwable e = assertThrows(DataException.class,
             () -> transformation(null, skipMissingOrNull).apply(originalRecord));
-        assertEquals(dataPlace() + " schema type must be STRING if field name is not specified: "
+        assertEquals(dataPlace()
+                + " schema type must be "
+                + "[INT8, INT16, INT32, INT64, FLOAT32, FLOAT64, BOOLEAN, STRING]"
+                + " if field name is not specified: "
                 + originalRecord,
             e.getMessage());
     }
@@ -80,11 +84,27 @@ abstract class ExtractTopicTest {
     }
 
     @Test
-    void noFieldName_NormalValue() {
+    void noFieldName_NormalInt64Value() {
+        final Schema schema = SchemaBuilder.INT64_SCHEMA;
+        final SinkRecord originalRecord = record(schema, 123L);
+        final SinkRecord result = transformation(null, false).apply(originalRecord);
+        assertEquals(setNewTopic(originalRecord, "123"), result);
+    }
+
+    @Test
+    void noFieldName_NormalBooleanValue() {
+        final Schema schema = SchemaBuilder.BOOLEAN_SCHEMA;
+        final SinkRecord originalRecord = record(schema, false);
+        final SinkRecord result = transformation(null, false).apply(originalRecord);
+        assertEquals(setNewTopic(originalRecord, "false"), result);
+    }
+
+    @Test
+    void noFieldName_NormalStringValue() {
         final Schema schema = SchemaBuilder.STRING_SCHEMA;
         final SinkRecord originalRecord = record(schema, NEW_TOPIC);
         final SinkRecord result = transformation(null, false).apply(originalRecord);
-        assertEquals(setNewTopic(originalRecord), result);
+        assertEquals(setNewTopic(originalRecord, NEW_TOPIC), result);
     }
 
     @ParameterizedTest
@@ -113,15 +133,18 @@ abstract class ExtractTopicTest {
 
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
-    void fieldName_NonStringInField(final boolean skipMissingOrNull) {
+    void fieldName_UnsupportedTypeInField(final boolean skipMissingOrNull) {
+        final Schema innerSchema = SchemaBuilder.struct().build();
         final Schema schema = SchemaBuilder.struct()
-            .field(FIELD, SchemaBuilder.INT8_SCHEMA)
+            .field(FIELD, innerSchema)
             .schema();
         final SinkRecord originalRecord = record(
-            schema, new Struct(schema).put(FIELD, (byte) 0));
+            schema, new Struct(schema).put(FIELD, new Struct(innerSchema)));
         final Throwable e = assertThrows(DataException.class,
             () -> transformation(FIELD, skipMissingOrNull).apply(originalRecord));
-        assertEquals(FIELD + " schema type in " + dataPlace() + " must be STRING: " + originalRecord,
+        assertEquals(FIELD + " schema type in " + dataPlace() + " must be "
+            + "[INT8, INT16, INT32, INT64, FLOAT32, FLOAT64, BOOLEAN, STRING]"
+            + ": " + originalRecord,
             e.getMessage());
     }
 
@@ -178,13 +201,33 @@ abstract class ExtractTopicTest {
     }
 
     @Test
-    void fieldName_NormalValue() {
+    void fieldName_NormalIntValue() {
+        final Schema schema = SchemaBuilder.struct()
+            .field(FIELD, SchemaBuilder.INT64_SCHEMA)
+            .schema();
+        final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, 123L));
+        final SinkRecord result = transformation(FIELD, true).apply(originalRecord);
+        assertEquals(setNewTopic(originalRecord, "123"), result);
+    }
+
+    @Test
+    void fieldName_NormalBooleanValue() {
+        final Schema schema = SchemaBuilder.struct()
+            .field(FIELD, SchemaBuilder.BOOLEAN_SCHEMA)
+            .schema();
+        final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, false));
+        final SinkRecord result = transformation(FIELD, true).apply(originalRecord);
+        assertEquals(setNewTopic(originalRecord, "false"), result);
+    }
+
+    @Test
+    void fieldName_NormalStringValue() {
         final Schema schema = SchemaBuilder.struct()
             .field(FIELD, SchemaBuilder.STRING_SCHEMA)
             .schema();
         final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, NEW_TOPIC));
         final SinkRecord result = transformation(FIELD, true).apply(originalRecord);
-        assertEquals(setNewTopic(originalRecord), result);
+        assertEquals(setNewTopic(originalRecord, NEW_TOPIC), result);
     }
 
     private ExtractTopic<SinkRecord> transformation(final String fieldName, final boolean skipMissingOrNull) {
@@ -215,8 +258,8 @@ abstract class ExtractTopicTest {
             456L, TimestampType.CREATE_TIME);
     }
 
-    private SinkRecord setNewTopic(final SinkRecord record) {
-        return record.newRecord(NEW_TOPIC,
+    private SinkRecord setNewTopic(final SinkRecord record, final String newTopic) {
+        return record.newRecord(newTopic,
             record.kafkaPartition(),
             record.keySchema(),
             record.key(),

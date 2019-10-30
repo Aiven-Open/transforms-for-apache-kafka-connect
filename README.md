@@ -35,7 +35,7 @@ transforms.ExtractTimestampFromValueField.field.name=inner_field_name
 
 This transformation extracts a string value from the record and use it as the topic name.
 
-The transformation can use either the whole key or value (in this case, it must have `STRING` type) or a field in them (in this case, it must have `STRUCT` type and the field's value must be `STRING`).
+The transformation can use either the whole key or value (in this case, it must have `INT8`, `INT16`, `INT32`, `INT64`, `FLOAT32`, `FLOAT32`, `BOOLEAN`, or `STRING` type) or a field in them (in this case, it must have `STRUCT` type and the field's value must be `INT8`, `INT16`, `INT32`, `INT64`, `FLOAT32`, `FLOAT32`, `BOOLEAN`, or `STRING`).
 
 Exists in two variants:
 - `io.aiven.kafka.connect.transforms.ExtractTopic$Key` - works on keys;
