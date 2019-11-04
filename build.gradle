@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import org.gradle.util.VersionNumber
+
 plugins {
     // https://docs.gradle.org/current/userguide/java_library_plugin.html
     id 'java-library'
@@ -26,6 +28,9 @@ plugins {
 
     // https://docs.gradle.org/current/userguide/idea_plugin.html
     id 'idea'
+
+    // https://ajoberstar.org/grgit/grgit-gradle.html
+    id 'org.ajoberstar.grgit' version '3.1.1'
 }
 
 repositories {
@@ -139,4 +144,108 @@ jar {
                 'Version': "${getArchiveVersion()}"
         )
     }
+}
+
+task releaseCommitsAndTag() {
+    description 'Make release commits and the tag necessary for release'
+    group 'GitHub release'
+
+    doFirst {
+        checkReleasePrerequisites()
+    }
+
+    outputs.upToDateWhen {
+        def tag = releaseTag()
+        def tagExists = grgit.tag.list().stream().anyMatch { it.getName() == tag }
+        if (tagExists) {
+            logger.quiet("Tag $tag exists")
+        }
+        return tagExists
+    }
+
+    doLast {
+        def releaseMessage = "Release version $releaseVersion"
+        def tag = releaseTag()
+
+        setVersionInGradleProperties(releaseVersion)
+
+        logger.quiet('Committing')
+        grgit.add(patterns: ['gradle.properties'])
+        grgit.commit(message: releaseMessage)
+
+        logger.quiet('Tagging with tag {}', tag)
+        grgit.tag.add(name: tag, annotate: true, message: releaseMessage)
+
+        setVersionInGradleProperties(nextSnapshotVersion)
+
+        logger.quiet('Committing')
+        grgit.add(patterns: ['gradle.properties'])
+        grgit.commit(message: "Bump version to $nextSnapshotVersion")
+    }
+}
+
+def checkReleasePrerequisites() {
+    if (!project.hasProperty('releaseVersion')) {
+        throw new GradleException('releaseVersion property is not set')
+    }
+
+    if (!(releaseVersion ==~ /\d+\.\d+\.\d+/)) {
+        throw new GradleException("Invalid releaseVersion format, must be 'x.y.z'")
+    }
+
+    if (!project.hasProperty('nextSnapshotVersion')) {
+        throw new GradleException('nextSnapshotVersion property is not set')
+    }
+
+    if (!(nextSnapshotVersion ==~ /\d+\.\d+\.\d+-SNAPSHOT/)) {
+        throw new GradleException("Invalid nextSnapshotVersion format, must be 'x.y.z-SNAPSHOT'")
+    }
+
+    def releaseVersionParsed = VersionNumber.parse(releaseVersion)
+    def nextSnapshotVersionParsed = VersionNumber.parse(nextSnapshotVersion)
+    if (nextSnapshotVersionParsed.getBaseVersion() <= releaseVersionParsed.getBaseVersion()) {
+        throw new GradleException('Next snapshot version must be higher than release version')
+    }
+
+    if (grgit.branch.current().getName() != 'master') {
+        throw new GradleException("Repository must be on branch 'master'")
+    }
+}
+
+def setVersionInGradleProperties(ver) {
+    logger.quiet('Changing version in gradle.properties to {}', ver)
+    file('gradle.properties.new').withWriter { writer ->
+        file('gradle.properties').eachLine { line ->
+            if (line ==~ /version=.*/) {
+                writer.writeLine("version=${ver}")
+            } else {
+                writer.writeLine(line)
+            }
+        }
+    }
+    file('gradle.properties.new').renameTo('gradle.properties')
+}
+
+task releasePush() {
+    description 'Push commits and release tag'
+    group 'GitHub release'
+
+    dependsOn releaseCommitsAndTag
+
+    outputs.upToDateWhen {
+        return false
+    }
+
+    doLast {
+        def githubRepo = 'https://github.com/aiven/aiven-kafka-connect-transforms'
+
+        grgit.push(tags: false, dryRun: false)
+        grgit.push(tags: true, dryRun: false)
+        logger.warn('Please visit {}/releases/tag/{} and add the distribution files and changelog', githubRepo, releaseTag())
+    }
+
+}
+
+def releaseTag() {
+    return 'v' + releaseVersion
 }
