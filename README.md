@@ -46,12 +46,30 @@ The transformation defines the following configurations:
 - `field.name` - The name of the field which should be used as the topic name. If `null` or empty, the entire key or value is used (and assumed to be a string). By default is `null`.
 - `skip.missing.or.null` - In case the source of the new topic name is `null` or missing, should a record be silently passed without transformation. By default is `false`.
 
-Here's an example of this transformation configuration:
+Here is an example of this transformation configuration:
 
 ```properties
 transforms=ExtractTopicFromValueField
 transforms.ExtractTopicFromValueField.type=io.aiven.kafka.connect.transforms.ExtractTopic$Value
 transforms.ExtractTopicFromValueField.field.name=inner_field_name
+```
+
+### `TombstoneHandler`
+
+This transformation manages tombstone records, 
+i.e. records with the entire value field being `null`.
+
+The transformation defines the following configurations:
+- `behavior` - The action the transformation must perform when encounter a tombstone record. The supported values are:
+  - `drop_silent` - silently drop tombstone records.
+  - `drop_warn` - drop tombstone records and log at `WARN` level.
+  - `fail` - fail with `DataException`.
+
+Here is an example of this transformation configuration:
+```properties
+transforms=TombstoneHandler
+transforms.TombstoneHandler.type=io.aiven.kafka.connect.transforms.TombstoneHandler
+transforms.TombstoneHandler.behavior=drop_silent
 ```
 
 ## License
