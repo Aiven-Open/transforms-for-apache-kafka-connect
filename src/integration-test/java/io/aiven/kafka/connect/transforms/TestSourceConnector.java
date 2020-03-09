@@ -53,7 +53,7 @@ public class TestSourceConnector extends SourceConnector {
 
     @Override
     public List<Map<String, String>> taskConfigs(final int maxTasks) {
-        return Collections.singletonList(Collections.EMPTY_MAP);
+        return Collections.singletonList(Collections.emptyMap());
     }
 
     @Override
