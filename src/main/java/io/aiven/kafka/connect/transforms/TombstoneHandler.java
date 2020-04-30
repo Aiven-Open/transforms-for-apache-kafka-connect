@@ -69,7 +69,7 @@ public class TombstoneHandler<R extends ConnectRecord<R>> implements Transformat
                 );
                 break;
             case DROP_WARN:
-                LOGGER.debug(
+                LOGGER.warn(
                     "Tombstone record encountered, dropping due to configured '{}' behavior",
                     TombstoneHandlerConfig.Behavior.DROP_WARN.name().toLowerCase()
                 );
