@@ -38,13 +38,25 @@ abstract class HashFieldTest {
 
     private static final String FIELD = "email";
     private static final String FIELD_VALUE = "jerry@all_your_bases.com";
+    private static final String DEFAULT_HASH_FUNCTION = HashFieldConfig.HashFunction.SHA256.toString();
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    void noFieldName_NullOrEmptyValue_NoSkip(final String value) {
+        final Schema schema = SchemaBuilder.STRING_SCHEMA;
+        final SinkRecord originalRecord = record(schema, value);
+        final Throwable e = assertThrows(DataException.class,
+            () -> transformation(null, false, DEFAULT_HASH_FUNCTION).apply(originalRecord));
+        assertEquals(dataPlace() + " can't be null or empty: " + originalRecord,
+            e.getMessage());
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {"MD5", "SHA-1", "SHA-256"})
     void nullSchema(final String hashFunction) {
         final SinkRecord originalRecord = record(null, null);
         final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, hashFunction).apply(originalRecord));
+            () -> transformation(FIELD, true, hashFunction).apply(originalRecord));
         assertEquals(dataPlace() + " schema can't be null: " + originalRecord, e.getMessage());
     }
 
@@ -54,7 +66,7 @@ abstract class HashFieldTest {
         final Schema schema = SchemaBuilder.struct().build();
         final SinkRecord originalRecord = record(schema, new Struct(schema));
         final Throwable e = assertThrows(DataException.class,
-            () -> transformation(null, hashFunction).apply(originalRecord));
+            () -> transformation(null, true, hashFunction).apply(originalRecord));
         assertEquals(dataPlace()
                         + " schema type must be "
                         + "[STRING]"
@@ -69,7 +81,7 @@ abstract class HashFieldTest {
         final Schema schema = SchemaBuilder.STRING_SCHEMA;
         final SinkRecord originalRecord = record(schema, value);
         assertDoesNotThrow(
-            () -> transformation(null, HashFieldConfig.HashFunction.SHA256.toString()).apply(originalRecord));
+            () -> transformation(null, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
     }
 
     @ParameterizedTest
@@ -77,7 +89,7 @@ abstract class HashFieldTest {
     void fieldName_NonStruct(final String hashFunction) {
         final SinkRecord originalRecord = record(SchemaBuilder.INT8_SCHEMA, "some");
         final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, hashFunction).apply(originalRecord));
+            () -> transformation(FIELD, true, hashFunction).apply(originalRecord));
         assertEquals(dataPlace() + " schema type must be STRUCT if field name is specified: "
                         + originalRecord,
                 e.getMessage());
@@ -91,7 +103,7 @@ abstract class HashFieldTest {
                 .schema();
         final SinkRecord originalRecord = record(schema, null);
         final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, hashFunction).apply(originalRecord));
+            () -> transformation(FIELD, true, hashFunction).apply(originalRecord));
         assertEquals(dataPlace() + " can't be null if field name is specified: " + originalRecord,
                 e.getMessage());
     }
@@ -106,7 +118,7 @@ abstract class HashFieldTest {
         final SinkRecord originalRecord = record(
                 schema, new Struct(schema).put(FIELD, new Struct(innerSchema)));
         final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, hashFunction).apply(originalRecord));
+            () -> transformation(FIELD, true, hashFunction).apply(originalRecord));
         assertEquals(FIELD + " schema type in " + dataPlace() + " must be "
                         + "[STRING]"
                         + ": " + originalRecord,
@@ -120,15 +132,21 @@ abstract class HashFieldTest {
                 .field(FIELD, SchemaBuilder.STRING_SCHEMA)
                 .schema();
         final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, FIELD_VALUE));
-        final SinkRecord result = transformation(FIELD, hashFunction).apply(originalRecord);
-        assertEquals(setNewValue(originalRecord, HashField.hashString(hashFunction, FIELD_VALUE)), result);
+        final HashField<SinkRecord> transform = transformation(FIELD, true, hashFunction);
+        final SinkRecord result = transform.apply(originalRecord);
+        final String newValue = HashField.hashString(transform.getConfig().hashFunction(), FIELD_VALUE);
+        assertEquals(setNewValue(originalRecord, newValue), result);
     }
 
-    private HashField<SinkRecord> transformation(final String fieldName, final String hashFunction) {
+    private HashField<SinkRecord> transformation(
+            final String fieldName,
+            final boolean skipMissingOrNull,
+            final String hashFunction) {
         final Map<String, String> props = new HashMap<>();
         if (fieldName != null) {
             props.put(HashFieldConfig.FIELD_NAME_CONFIG, fieldName);
         }
+        props.put("skip.missing.or.null", Boolean.toString(skipMissingOrNull));
         props.put(HashFieldConfig.FUNCTION_CONFIG, hashFunction);
         final HashField<SinkRecord> transform = createTransformationObject();
         transform.configure(props);

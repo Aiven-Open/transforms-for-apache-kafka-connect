@@ -17,13 +17,11 @@
 package io.aiven.kafka.connect.transforms;
 
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
@@ -68,8 +66,12 @@ public abstract class HashField<R extends ConnectRecord<R>> implements Transform
             newValue = getNewValueForNamedField(
                     record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.fieldName().get());
         } else {
-            newValue = getNewValueWithoutFieldName(
-                    record.toString(), schemaAndValue.schema(), schemaAndValue.value());
+            if (config.skipMissingOrNull()) {
+                newValue = getNewValueWithoutFieldName(
+                        record.toString(), schemaAndValue.schema(), schemaAndValue.value());
+            } else {
+                throw new DataException(dataPlace() + " can't be null or empty: " + record);
+            }
         }
 
         if (newValue.isPresent()) {
@@ -111,7 +113,11 @@ public abstract class HashField<R extends ConnectRecord<R>> implements Transform
 
         final Field field = schema.field(fieldName);
         if (field == null) {
-            return Optional.empty();
+            if (config.skipMissingOrNull()) {
+                return Optional.empty();
+            } else {
+                throw new DataException(fieldName + " in " + dataPlace() + " schema can't be missing: " + recordStr);
+            }
         }
 
         if (!SUPPORTED_TYPES_TO_CONVERT_FROM.contains(field.schema().type())) {
@@ -123,27 +129,22 @@ public abstract class HashField<R extends ConnectRecord<R>> implements Transform
         final Struct struct = (Struct) value;
 
         final Optional<String> result = Optional.ofNullable(struct.get(fieldName))
-                .map(Object::toString).flatMap(s -> config.hashFunction().map(alg -> hashString(alg, s)));
+                .map(Object::toString).map(s -> hashString(config.hashFunction(), s));
+
         if (result.isPresent() && !result.get().equals("")) {
             return result;
         } else {
-            return Optional.empty();
+            if (config.skipMissingOrNull()) {
+                return Optional.empty();
+            } else {
+                throw new DataException(fieldName + " in " + dataPlace() + " can't be null or empty: " + recordStr);
+            }
         }
     }
 
-    static final String hashString(final String hashAlg, final String input) {
-        try {
-            final MessageDigest md = MessageDigest.getInstance(hashAlg);
-            final byte[] digest = md.digest(input.getBytes());
-            return Base64.getEncoder().encodeToString(digest);
-        } catch (final NoSuchAlgorithmException e) {
-            System.out.println("EXCEPTION: " + e.getMessage());
-            throw new DataException("Hash function " + hashAlg
-                    + " must be "
-                    + HashFieldConfig.HashFunction.stringValues
-                    .stream()
-                    .collect(Collectors.joining("|", "[", "]")));
-        }
+    static final String hashString(final MessageDigest md, final String input) {
+        final byte[] digest = md.digest(input.getBytes());
+        return Base64.getEncoder().encodeToString(digest);
     }
 
     private Optional<String> getNewValueWithoutFieldName(final String recordStr,
@@ -157,7 +158,7 @@ public abstract class HashField<R extends ConnectRecord<R>> implements Transform
         }
 
         final Optional<String> result = Optional.ofNullable(value)
-                .map(Object::toString).flatMap(s -> config.hashFunction().map(alg -> hashString(alg, s)));
+                .map(Object::toString).map(s -> hashString(config.hashFunction(), s));
 
         if (result.isPresent() && !result.get().equals("")) {
             return result;
@@ -188,5 +189,9 @@ public abstract class HashField<R extends ConnectRecord<R>> implements Transform
         protected String dataPlace() {
             return "value";
         }
+    }
+
+    protected HashFieldConfig getConfig() {
+        return this.config;
     }
 }
