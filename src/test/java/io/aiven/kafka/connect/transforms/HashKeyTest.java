@@ -19,20 +19,20 @@ package io.aiven.kafka.connect.transforms;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
 
-public class HashFieldValueTest extends HashFieldTest {
+public class HashKeyTest extends HashTest {
 
     @Override
     protected String dataPlace() {
-        return "value";
+        return "key";
     }
 
     @Override
-    protected HashField<SinkRecord> createTransformationObject() {
-        return new HashField.Value<>();
+    protected Hash<SinkRecord> createTransformationObject() {
+        return new Hash.Key<>();
     }
 
     @Override
     protected SinkRecord record(final Schema schema, final Object data) {
-        return record(null, null, schema, data);
+        return record(schema, data, null, null);
     }
 }

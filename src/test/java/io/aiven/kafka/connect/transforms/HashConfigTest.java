@@ -29,12 +29,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class HashFieldConfigTest {
+class HashConfigTest {
     @Test
     void defaults() {
         final Map<String, String> props = new HashMap<>();
         final Throwable e = assertThrows(ConfigException.class,
-            () -> new HashFieldConfig(props));
+            () -> new HashConfig(props));
         assertEquals("Missing required configuration \"function\" which has no default value.",
               e.getMessage());
     }
@@ -43,37 +43,52 @@ class HashFieldConfigTest {
     @ValueSource(booleans = {true, false})
     void skipMissingOrNull(final boolean skipMissingOrNull) {
         final Map<String, String> props = new HashMap<>();
-        props.put(HashFieldConfig.SKIP_MISSING_OR_NULL_CONFIG, Boolean.toString(skipMissingOrNull));
-        props.put(HashFieldConfig.FUNCTION_CONFIG, HashFieldConfig.HashFunction.SHA256.toString());
-        final HashFieldConfig config = new HashFieldConfig(props);
+        props.put("skip.missing.or.null", Boolean.toString(skipMissingOrNull));
+        props.put("function", "sha256");
+        final HashConfig config = new HashConfig(props);
         assertEquals(skipMissingOrNull, config.skipMissingOrNull());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"MD5", "SHA-1", "SHA-256"})
-    void hashFunction(final String hashFunction) {
+    @Test
+    void hashFunctionMd5() {
         final Map<String, String> props = new HashMap<>();
-        props.put(HashFieldConfig.FUNCTION_CONFIG, hashFunction);
-        final HashFieldConfig config = new HashFieldConfig(props);
-        assertEquals(hashFunction, config.hashFunction().getAlgorithm());
+        props.put("function", "md5");
+        final HashConfig config = new HashConfig(props);
+        assertEquals(HashConfig.HashFunction.MD5, config.hashFunction());
+    }
+
+    @Test
+    void hashFunctionSha1() {
+        final Map<String, String> props = new HashMap<>();
+        props.put("function", "sha1");
+        final HashConfig config = new HashConfig(props);
+        assertEquals(HashConfig.HashFunction.SHA1, config.hashFunction());
+    }
+
+    @Test
+    void hashFunctionSha256() {
+        final Map<String, String> props = new HashMap<>();
+        props.put("function", "sha256");
+        final HashConfig config = new HashConfig(props);
+        assertEquals(HashConfig.HashFunction.SHA256, config.hashFunction());
     }
 
     @Test
     void emptyFieldName() {
         final Map<String, String> props = new HashMap<>();
-        props.put(HashFieldConfig.FIELD_NAME_CONFIG, "");
-        props.put(HashFieldConfig.FUNCTION_CONFIG, HashFieldConfig.HashFunction.SHA256.toString());
-        final HashFieldConfig config = new HashFieldConfig(props);
+        props.put("field.name", "");
+        props.put("function", "sha256");
+        final HashConfig config = new HashConfig(props);
         assertEquals(Optional.empty(), config.fieldName());
     }
 
     @Test
     void definedFieldName() {
         final Map<String, String> props = new HashMap<>();
-        props.put(HashFieldConfig.FIELD_NAME_CONFIG, "test");
-        props.put(HashFieldConfig.FUNCTION_CONFIG, HashFieldConfig.HashFunction.SHA256.toString());
-        final HashFieldConfig config = new HashFieldConfig(props);
+        props.put("field.name", "test");
+        props.put("function", "sha256");
+        final HashConfig config = new HashConfig(props);
         assertEquals(Optional.of("test"), config.fieldName());
-        assertEquals(HashFieldConfig.HashFunction.SHA256.toString(), config.hashFunction().getAlgorithm());
+        assertEquals(HashConfig.HashFunction.SHA256, config.hashFunction());
     }
 }
