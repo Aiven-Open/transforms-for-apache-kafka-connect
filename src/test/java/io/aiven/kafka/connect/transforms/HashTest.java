@@ -63,22 +63,20 @@ abstract class HashTest {
         assertEquals(originalRecord, result);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"md5", "sha1", "sha256"})
-    void nullSchema(final String hashFunction) {
+    @Test
+    void nullSchema() {
         final SinkRecord originalRecord = record(null, null);
         final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, true, hashFunction).apply(originalRecord));
+            () -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
         assertEquals(dataPlace() + " schema can't be null: " + originalRecord, e.getMessage());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"md5", "sha1", "sha256"})
-    void noFieldName_UnsupportedType(final String hashFunction) {
+    @Test
+    void noFieldName_UnsupportedType() {
         final Schema schema = SchemaBuilder.struct().build();
         final SinkRecord originalRecord = record(schema, new Struct(schema));
         final Throwable e = assertThrows(DataException.class,
-            () -> transformation(null, true, hashFunction).apply(originalRecord));
+            () -> transformation(null, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
         assertEquals(dataPlace()
                         + " schema type must be STRING if field name is not specified: "
                         + originalRecord,
@@ -153,33 +151,30 @@ abstract class HashTest {
         assertEquals(originalRecord, result);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"md5", "sha1", "sha256"})
-    void fieldName_NonStruct(final String hashFunction) {
+    @Test
+    void fieldName_NonStruct() {
         final SinkRecord originalRecord = record(SchemaBuilder.INT8_SCHEMA, "some");
         final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, true, hashFunction).apply(originalRecord));
+            () -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
         assertEquals(dataPlace() + " schema type must be STRUCT if field name is specified: "
                         + originalRecord,
                 e.getMessage());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"md5", "sha1", "sha256"})
-    void fieldName_NullStruct(final String hashFunction) {
+    @Test
+    void fieldName_NullStruct() {
         final Schema schema = SchemaBuilder.struct()
                 .field(FIELD, SchemaBuilder.STRING_SCHEMA)
                 .schema();
         final SinkRecord originalRecord = record(schema, null);
         final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, true, hashFunction).apply(originalRecord));
+            () -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
         assertEquals(dataPlace() + " can't be null if field name is specified: " + originalRecord,
                 e.getMessage());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"md5", "sha1", "sha256"})
-    void fieldName_UnsupportedTypeInField(final String hashFunction) {
+    @Test
+    void fieldName_UnsupportedTypeInField() {
         final Schema innerSchema = SchemaBuilder.struct().build();
         final Schema schema = SchemaBuilder.struct()
                 .field(FIELD, innerSchema)
@@ -187,7 +182,7 @@ abstract class HashTest {
         final SinkRecord originalRecord = record(
                 schema, new Struct(schema).put(FIELD, new Struct(innerSchema)));
         final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, true, hashFunction).apply(originalRecord));
+            () -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
         assertEquals(FIELD + " schema type in " + dataPlace() + " must be STRING: "
                         + originalRecord,
                 e.getMessage());
