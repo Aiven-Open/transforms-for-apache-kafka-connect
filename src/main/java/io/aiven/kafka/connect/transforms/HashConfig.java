@@ -16,32 +16,26 @@
 
 package io.aiven.kafka.connect.transforms;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.connect.errors.DataException;
 
-class HashFieldConfig extends AbstractConfig {
-    public static final String FIELD_NAME_CONFIG = "field.name";
+class HashConfig extends AbstractConfig {
+    private static final String FIELD_NAME_CONFIG = "field.name";
     private static final String FIELD_NAME_DOC =
             "The name of the field which value should be hashed. If null or empty, "
                     + "the entire key or value is used (and assumed to be a string). By default is null.";
-    public static final String SKIP_MISSING_OR_NULL_CONFIG = "skip.missing.or.null";
+    private static final String SKIP_MISSING_OR_NULL_CONFIG = "skip.missing.or.null";
     private static final String SKIP_MISSING_OR_NULL_DOC =
-            "In case the source of the new topic name is null or missing, "
+            "In case the value to be hashed is null or missing, "
                     + "should a record be silently passed without transformation.";
-    public static final String FUNCTION_CONFIG = "function";
+    private static final String FUNCTION_CONFIG = "function";
     private static final String FUNCTION_DOC =
             "The name of the hash function to use. The supported values are: md5, sha1, sha256.";
-    private MessageDigest md = null;
 
-    HashFieldConfig(final Map<?, ?> originals) {
+    HashConfig(final Map<?, ?> originals) {
         super(config(), originals);
     }
 
@@ -72,20 +66,25 @@ class HashFieldConfig extends AbstractConfig {
     }
 
     public enum HashFunction {
-        MD5,
+        MD5 {
+            public String toString() {
+                return "md5";
+            }
+        },
         SHA1 {
             public String toString() {
-                return "SHA-1";
+                return "sha1";
             }
         },
         SHA256 {
             public String toString() {
-                return "SHA-256";
+                return "sha256";
             }
         };
-        static String stringValues = Stream.of(HashFunction.values())
-                .map(Enum::toString)
-                .collect(Collectors.joining("|", "[", "]"));
+
+        public static HashFunction fromString(final String value) {
+            return valueOf(value.toUpperCase());
+        }
     }
 
     Optional<String> fieldName() {
@@ -100,18 +99,8 @@ class HashFieldConfig extends AbstractConfig {
         return getBoolean(SKIP_MISSING_OR_NULL_CONFIG);
     }
 
-    MessageDigest hashFunction() {
-        final String hashAlg = getString(FUNCTION_CONFIG);
-        try {
-            if (md == null) {
-                md = MessageDigest.getInstance(hashAlg);
-            }
-        } catch (final NoSuchAlgorithmException e) {
-            throw new DataException("Hash function " + hashAlg
-                    + " must be "
-                    + HashFieldConfig.HashFunction.stringValues);
-        }
-        return md;
+    HashFunction hashFunction() {
+        return HashFunction.fromString(getString(FUNCTION_CONFIG));
     }
 }
 

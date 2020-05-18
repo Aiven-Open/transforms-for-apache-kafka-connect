@@ -44,7 +44,7 @@ Exists in two variants:
 The transformation defines the following configurations:
 
 - `field.name` - The name of the field which should be used as the topic name. If `null` or empty, the entire key or value is used (and assumed to be a string). By default is `null`.
-- `skip.missing.or.null` - In case the source of the new topic name is `null` or missing, should a record be silently passed without transformation. By default is `false`.
+- `skip.missing.or.null` - In case the source of the new topic name is `null` or missing, should a record be silently passed without transformation. By default, is `false`.
 
 Here is an example of this transformation configuration:
 
@@ -52,6 +52,32 @@ Here is an example of this transformation configuration:
 transforms=ExtractTopicFromValueField
 transforms.ExtractTopicFromValueField.type=io.aiven.kafka.connect.transforms.ExtractTopic$Value
 transforms.ExtractTopicFromValueField.field.name=inner_field_name
+```
+
+### `Hash`
+
+This transformation replaces a string value with its hash.
+
+The transformation can hash either the whole key or value (in this case, it must have `STRING` type) or a field in them (in this case, it must have `STRUCT` type and the field's value must be `STRING`).
+
+Exists in two variants:
+
+ - `io.aiven.kafka.connect.transforms.Hash$Key` - works on keys;
+ - `io.aiven.kafka.connect.transforms.Hash$Value` - works on values.
+
+The transformation defines the following configurations:
+
+ - `field.name` - The name of the field which value should be hashed. If `null` or empty, the entire key or value is used (and assumed to be a string). By default, is `null`.
+ - `function` - The name of the hash function to use. The supported values are: `md5`, `sha1`, and `sha256`.
+ - `skip.missing.or.null` - In case the value to be hashed is `null` or missing, should a record be silently passed without transformation. By default, is `false`.
+
+Here is an example of this transformation configuration:
+
+```
+transforms=HashEmail
+transforms.HashEmail.type=io.aiven.kafka.connect.transforms.Hash$Value
+transforms.HashEmail.field.name=email
+transforms.HashEmail.function=sha1
 ```
 
 ### `TombstoneHandler`

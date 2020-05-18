@@ -17,9 +17,8 @@
 package io.aiven.kafka.connect.transforms;
 
 import java.security.MessageDigest;
-import java.util.Arrays;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,6 +28,7 @@ import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.transforms.Transformation;
 
@@ -36,22 +36,38 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public abstract class HashField<R extends ConnectRecord<R>> implements Transformation<R> {
-    private static final Logger log = LoggerFactory.getLogger(HashField.class);
+public abstract class Hash<R extends ConnectRecord<R>> implements Transformation<R> {
+    private static final Logger log = LoggerFactory.getLogger(Hash.class);
 
-    private HashFieldConfig config;
-    private static final List<Schema.Type> SUPPORTED_TYPES_TO_CONVERT_FROM = Arrays.asList(
-            Schema.Type.STRING
-    );
+    private HashConfig config;
+    private MessageDigest messageDigest;
 
     @Override
     public ConfigDef config() {
-        return HashFieldConfig.config();
+        return HashConfig.config();
     }
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        this.config = new HashFieldConfig(configs);
+        this.config = new HashConfig(configs);
+
+        try {
+            switch (config.hashFunction()) {
+                case MD5:
+                    messageDigest = MessageDigest.getInstance("MD5");
+                    break;
+                case SHA1:
+                    messageDigest = MessageDigest.getInstance("SHA1");
+                    break;
+                case SHA256:
+                    messageDigest = MessageDigest.getInstance("SHA-256");
+                    break;
+                default:
+                    throw new ConnectException("Unknown hash function " + config.hashFunction());
+            }
+        } catch (final NoSuchAlgorithmException e) {
+            throw new ConnectException(e);
+        }
     }
 
     @Override
@@ -66,12 +82,8 @@ public abstract class HashField<R extends ConnectRecord<R>> implements Transform
             newValue = getNewValueForNamedField(
                     record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.fieldName().get());
         } else {
-            if (config.skipMissingOrNull()) {
-                newValue = getNewValueWithoutFieldName(
-                        record.toString(), schemaAndValue.schema(), schemaAndValue.value());
-            } else {
-                throw new DataException(dataPlace() + " can't be null or empty: " + record);
-            }
+            newValue = getNewValueWithoutFieldName(
+                    record.toString(), schemaAndValue.schema(), schemaAndValue.value());
         }
 
         if (newValue.isPresent()) {
@@ -114,60 +126,61 @@ public abstract class HashField<R extends ConnectRecord<R>> implements Transform
         final Field field = schema.field(fieldName);
         if (field == null) {
             if (config.skipMissingOrNull()) {
+                log.debug(fieldName + " in " + dataPlace() + " schema is missing, skipping transformation");
                 return Optional.empty();
             } else {
                 throw new DataException(fieldName + " in " + dataPlace() + " schema can't be missing: " + recordStr);
             }
         }
 
-        if (!SUPPORTED_TYPES_TO_CONVERT_FROM.contains(field.schema().type())) {
+        if (field.schema().type() != Schema.Type.STRING) {
             throw new DataException(fieldName + " schema type in " + dataPlace()
-                    + " must be " + SUPPORTED_TYPES_TO_CONVERT_FROM
+                    + " must be " + Schema.Type.STRING
                     + ": " + recordStr);
         }
 
         final Struct struct = (Struct) value;
-
-        final Optional<String> result = Optional.ofNullable(struct.get(fieldName))
-                .map(Object::toString).map(s -> hashString(config.hashFunction(), s));
-
-        if (result.isPresent() && !result.get().equals("")) {
-            return result;
-        } else {
+        final String stringValue = struct.getString(fieldName);
+        if (stringValue == null) {
             if (config.skipMissingOrNull()) {
+                log.debug(fieldName + " in " + dataPlace() + " is null, skipping transformation");
                 return Optional.empty();
             } else {
-                throw new DataException(fieldName + " in " + dataPlace() + " can't be null or empty: " + recordStr);
+                throw new DataException(fieldName + " in " + dataPlace() + " can't be null: " + recordStr);
             }
+        } else {
+            return Optional.of(hashString(stringValue));
         }
-    }
-
-    static final String hashString(final MessageDigest md, final String input) {
-        final byte[] digest = md.digest(input.getBytes());
-        return Base64.getEncoder().encodeToString(digest);
     }
 
     private Optional<String> getNewValueWithoutFieldName(final String recordStr,
                                                          final Schema schema,
                                                          final Object value) {
-        if (!SUPPORTED_TYPES_TO_CONVERT_FROM.contains(schema.type())) {
+        if (schema.type() != Schema.Type.STRING) {
             throw new DataException(dataPlace() + " schema type must be "
-                    + SUPPORTED_TYPES_TO_CONVERT_FROM
+                    + Schema.Type.STRING
                     + " if field name is not specified: "
                     + recordStr);
         }
 
-        final Optional<String> result = Optional.ofNullable(value)
-                .map(Object::toString).map(s -> hashString(config.hashFunction(), s));
-
-        if (result.isPresent() && !result.get().equals("")) {
-            return result;
-        } else {
-            return Optional.empty();
+        if (value == null) {
+            if (config.skipMissingOrNull()) {
+                log.debug(dataPlace() + " is null, skipping transformation");
+                return Optional.empty();
+            } else {
+                throw new DataException(dataPlace() + " can't be null: " + recordStr);
+            }
         }
+
+        return Optional.of(hashString(value.toString()));
     }
 
-    public static class Key<R extends ConnectRecord<R>> extends HashField<R> {
+    private String hashString(final String string) {
+        final byte[] digest = messageDigest.digest(string.getBytes());
+        return Base64.getEncoder().encodeToString(digest);
+    }
+
+    public static class Key<R extends ConnectRecord<R>> extends Hash<R> {
         @Override
         protected SchemaAndValue getSchemaAndValue(final R record) {
             return new SchemaAndValue(record.keySchema(), record.key());
@@ -179,7 +192,7 @@ public abstract class HashField<R extends ConnectRecord<R>> implements Transform
         }
     }
 
-    public static class Value<R extends ConnectRecord<R>> extends HashField<R> {
+    public static class Value<R extends ConnectRecord<R>> extends Hash<R> {
         @Override
         protected SchemaAndValue getSchemaAndValue(final R record) {
             return new SchemaAndValue(record.valueSchema(), record.value());
@@ -191,7 +204,7 @@ public abstract class HashField<R extends ConnectRecord<R>> implements Transform
         }
     }
 
-    protected HashFieldConfig getConfig() {
+    protected HashConfig getConfig() {
         return this.config;
     }
 }
