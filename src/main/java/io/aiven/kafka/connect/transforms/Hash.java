@@ -77,7 +77,7 @@ public abstract class Hash<R extends ConnectRecord<R>> implements Transformation
             throw new DataException(dataPlace() + " schema can't be null: " + record);
         }
 
-        final Optional<String> newValue;
+        final Optional<Object> newValue;
         if (config.fieldName().isPresent()) {
             newValue = getNewValueForNamedField(
                     record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.fieldName().get());
@@ -110,7 +110,7 @@ public abstract class Hash<R extends ConnectRecord<R>> implements Transformation
 
     protected abstract SchemaAndValue getSchemaAndValue(final R record);
 
-    private Optional<String> getNewValueForNamedField(final String recordStr,
+    private Optional<Object> getNewValueForNamedField(final String recordStr,
                                                       final Schema schema,
                                                       final Object value,
                                                       final String fieldName) {
@@ -149,11 +149,13 @@ public abstract class Hash<R extends ConnectRecord<R>> implements Transformation
                 throw new DataException(fieldName + " in " + dataPlace() + " can't be null: " + recordStr);
             }
         } else {
-            return Optional.of(hashString(stringValue));
+            final String updatedValue = hashString(stringValue);
+            final Struct updatedRecord = struct.put(fieldName, updatedValue);
+            return Optional.ofNullable(updatedRecord);
         }
     }
 
-    private Optional<String> getNewValueWithoutFieldName(final String recordStr,
+    private Optional<Object> getNewValueWithoutFieldName(final String recordStr,
                                                          final Schema schema,
                                                          final Object value) {
         if (schema.type() != Schema.Type.STRING) {
