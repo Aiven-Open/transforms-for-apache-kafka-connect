@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.transforms;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 
@@ -31,6 +30,8 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.transforms.Transformation;
+
+import io.aiven.kafka.connect.transforms.utils.Hex;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -178,8 +179,9 @@ public abstract class Hash<R extends ConnectRecord<R>> implements Transformation
     }
 
     private String hashString(final String string) {
+        // We don't call reset() here because digest() does resetting afterwards.
         final byte[] digest = messageDigest.digest(string.getBytes());
-        return Base64.getEncoder().encodeToString(digest);
+        return Hex.encode(digest);
     }
 
     public static class Key<R extends ConnectRecord<R>> extends Hash<R> {

@@ -16,9 +16,6 @@
 
 package io.aiven.kafka.connect.transforms;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,7 +37,32 @@ abstract class HashTest {
 
     private static final String FIELD = "email";
     private static final String EMPTY_FIELD_VALUE = "";
-    private static final String NON_EMPTY_FIELD_VALUE = "jerry@all_your_bases.com";
+    private static final String NON_EMPTY_FIELD_VALUE = "jerry@big-corp.com";
+
+    private static final Map<String, Map<String, String>> HASHED_VALUES = new HashMap<>();
+
+    static {
+        HASHED_VALUES.put("md5", new HashMap<>());
+        // echo -n "" | md5sum -t
+        HASHED_VALUES.get("md5").put(EMPTY_FIELD_VALUE, "d41d8cd98f00b204e9800998ecf8427e");
+        // echo -n "jerry@big-corp.com" | md5sum -t
+        HASHED_VALUES.get("md5").put(NON_EMPTY_FIELD_VALUE, "10e5756d5d4c9c1cadd5e1b952071378");
+
+        HASHED_VALUES.put("sha1", new HashMap<>());
+        // echo -n "" | sha1sum -t
+        HASHED_VALUES.get("sha1").put(EMPTY_FIELD_VALUE, "da39a3ee5e6b4b0d3255bfef95601890afd80709");
+        // echo -n "jerry@big-corp.com" | sha1sum -t
+        HASHED_VALUES.get("sha1").put(NON_EMPTY_FIELD_VALUE, "dd9ab6e93603bf618db0894a82da64f1623a94b6");
+
+        HASHED_VALUES.put("sha256", new HashMap<>());
+        // echo -n "" | sha256sum -t
+        HASHED_VALUES.get("sha256").put(EMPTY_FIELD_VALUE,
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+        // echo -n "jerry@big-corp.com" | sha256sum -t
+        HASHED_VALUES.get("sha256").put(NON_EMPTY_FIELD_VALUE,
+                "20e85b05e7349963fc64746fbc7f3f4fdf31507921360847ebef333b229cf2d6");
+    }
+
     private static final String DEFAULT_HASH_FUNCTION = HashConfig.HashFunction.SHA256.toString();
     private static final String UNAFFECTED_FIELD = "name";
     private static final String UNAFFECTED_FIELD_VALUE = "jerry";
@@ -232,6 +254,20 @@ abstract class HashTest {
         assertEquals(setNewValue(originalRecord, newValue), result);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"md5", "sha1", "sha256"})
+    void sameValueSameHash(final String hashFunction) {
+        final Schema schema = SchemaBuilder.STRING_SCHEMA;
+        final Hash<SinkRecord> transform = transformation(null, false, hashFunction);
+
+        for (int i = 0; i < 10; i++) {
+            final SinkRecord originalRecord = record(schema, NON_EMPTY_FIELD_VALUE);
+            final SinkRecord result = transform.apply(originalRecord);
+            final String newValue = hash(hashFunction, NON_EMPTY_FIELD_VALUE);
+            assertEquals(setNewValue(originalRecord, newValue), result);
+        }
+    }
+
     private Hash<SinkRecord> transformation(
             final String fieldName,
             final boolean skipMissingOrNull,
@@ -277,24 +313,6 @@ abstract class HashTest {
     }
 
     private String hash(final String function, final String value) {
-        try {
-            final MessageDigest md;
-            switch (function) {
-                case "md5":
-                    md = MessageDigest.getInstance("MD5");
-                    break;
-                case "sha1":
-                    md = MessageDigest.getInstance("SHA1");
-                    break;
-                case "sha256":
-                    md = MessageDigest.getInstance("SHA-256");
-                    break;
-                default:
-                    throw new IllegalArgumentException(function);
-            }
-            return Base64.getEncoder().encodeToString(md.digest(value.getBytes()));
-        } catch (final NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
+        return HASHED_VALUES.get(function).get(value);
     }
 }
