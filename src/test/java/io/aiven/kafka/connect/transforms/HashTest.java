@@ -42,6 +42,8 @@ abstract class HashTest {
     private static final String EMPTY_FIELD_VALUE = "";
     private static final String NON_EMPTY_FIELD_VALUE = "jerry@all_your_bases.com";
     private static final String DEFAULT_HASH_FUNCTION = HashConfig.HashFunction.SHA256.toString();
+    private static final String UNAFFECTED_FIELD = "name";
+    private static final String UNAFFECTED_FIELD_VALUE = "jerry";
 
     @Test
     void noFieldName_NullValue_NoSkip() {
@@ -132,8 +134,12 @@ abstract class HashTest {
     void fieldName_NullValue_Skip() {
         final Schema schema = SchemaBuilder.struct()
                 .field(FIELD, SchemaBuilder.OPTIONAL_STRING_SCHEMA)
+                .field(UNAFFECTED_FIELD, SchemaBuilder.STRING_SCHEMA)
                 .schema();
-        final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, null));
+        final Struct originalStruct = new Struct(schema)
+                .put(FIELD, null)
+                .put(UNAFFECTED_FIELD, UNAFFECTED_FIELD_VALUE);
+        final SinkRecord originalRecord = record(schema, originalStruct);
         final Hash<SinkRecord> transform = transformation(FIELD, true, DEFAULT_HASH_FUNCTION);
         final SinkRecord result = transform.apply(originalRecord);
         // No changes.
@@ -193,11 +199,17 @@ abstract class HashTest {
     void fieldName_NormalStringValue(final String hashFunction) {
         final Schema schema = SchemaBuilder.struct()
                 .field(FIELD, SchemaBuilder.STRING_SCHEMA)
+                .field(UNAFFECTED_FIELD, SchemaBuilder.STRING_SCHEMA)
                 .schema();
-        final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, NON_EMPTY_FIELD_VALUE));
+        final Struct originalStruct = new Struct(schema)
+                .put(FIELD, NON_EMPTY_FIELD_VALUE)
+                .put(UNAFFECTED_FIELD, UNAFFECTED_FIELD_VALUE);
+        final SinkRecord originalRecord = record(schema, originalStruct);
         final Hash<SinkRecord> transform = transformation(FIELD, true, hashFunction);
         final SinkRecord result = transform.apply(originalRecord);
-        final String newValue = hash(hashFunction, NON_EMPTY_FIELD_VALUE);
+        final Struct newValue = new Struct(schema)
+                .put(FIELD, hash(hashFunction, NON_EMPTY_FIELD_VALUE))
+                .put(UNAFFECTED_FIELD, UNAFFECTED_FIELD_VALUE);
         assertEquals(setNewValue(originalRecord, newValue), result);
     }
 
@@ -206,11 +218,17 @@ abstract class HashTest {
     void fieldName_EmptyStringValue(final String hashFunction) {
         final Schema schema = SchemaBuilder.struct()
                 .field(FIELD, SchemaBuilder.STRING_SCHEMA)
+                .field(UNAFFECTED_FIELD, SchemaBuilder.STRING_SCHEMA)
                 .schema();
-        final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, EMPTY_FIELD_VALUE));
+        final Struct originalStruct = new Struct(schema)
+                .put(FIELD, EMPTY_FIELD_VALUE)
+                .put(UNAFFECTED_FIELD, UNAFFECTED_FIELD_VALUE);
+        final SinkRecord originalRecord = record(schema, originalStruct);
         final Hash<SinkRecord> transform = transformation(FIELD, true, hashFunction);
         final SinkRecord result = transform.apply(originalRecord);
-        final String newValue = hash(hashFunction, EMPTY_FIELD_VALUE);
+        final Struct newValue = new Struct(schema)
+                .put(FIELD, hash(hashFunction, EMPTY_FIELD_VALUE))
+                .put(UNAFFECTED_FIELD, UNAFFECTED_FIELD_VALUE);
         assertEquals(setNewValue(originalRecord, newValue), result);
     }
 
@@ -246,7 +264,7 @@ abstract class HashTest {
                 456L, TimestampType.CREATE_TIME);
     }
 
-    private SinkRecord setNewValue(final SinkRecord record, final String newValue) {
+    private SinkRecord setNewValue(final SinkRecord record, final Object newValue) {
         return record.newRecord(record.topic(),
                 record.kafkaPartition(),
                 record.keySchema(),
