@@ -16,200 +16,23 @@
 
 package io.aiven.kafka.connect.transforms;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.SchemaBuilder;
-import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.data.Timestamp;
-import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+public class ExtractTimestampValueTest extends ExtractTimestampTest {
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-public class ExtractTimestampValueTest {
-    private static final String FIELD = "test_field";
-
-    @Test
-    void recordNotStructOrMap() {
-        final SinkRecord originalRecord = record(SchemaBuilder.INT8_SCHEMA, (byte) 123);
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals("Value type must be STRUCT or MAP: " + originalRecord,
-            e.getMessage());
+    @Override
+    protected String dataPlace() {
+        return "value";
     }
 
-    @Test
-    void recordStructNull() {
-        final Schema schema = SchemaBuilder.struct().schema();
-        final SinkRecord originalRecord = record(schema, null);
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals("Value can't be null: " + originalRecord,
-            e.getMessage());
+    @Override
+    protected ExtractTimestamp<SinkRecord> createTransformationObject() {
+        return new ExtractTimestamp.Value<>();
     }
 
-    @Test
-    void recordMapNull() {
-        final SinkRecord originalRecord = record(null, null);
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals("Value can't be null: " + originalRecord,
-            e.getMessage());
-    }
-
-    @Test
-    void structWithMissingField() {
-        final Schema schema = SchemaBuilder.struct()
-            .field(FIELD, Schema.INT64_SCHEMA)
-            .build();
-        final SinkRecord originalRecord = record(null, new Struct(schema));
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be present and its value can't be null: " + originalRecord,
-            e.getMessage());
-    }
-
-    @Test
-    void mapWithMissingField() {
-        final SinkRecord originalRecord = record(null, new HashMap<>());
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be present and its value can't be null: " + originalRecord,
-            e.getMessage());
-    }
-
-    @Test
-    void structWithNullField() {
-        final Schema schema = SchemaBuilder.struct()
-            .field(FIELD, Schema.OPTIONAL_INT64_SCHEMA)
-            .build();
-        final SinkRecord originalRecord = record(null, new Struct(schema).put(FIELD, null));
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be present and its value can't be null: " + originalRecord,
-            e.getMessage());
-    }
-
-    @Test
-    void mapWithNullField() {
-        final HashMap<Object, Object> valueMap = new HashMap<>();
-        valueMap.put(FIELD, null);
-        final SinkRecord originalRecord = record(null, valueMap);
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be present and its value can't be null: " + originalRecord,
-            e.getMessage());
-    }
-
-    @Test
-    void structWithFieldOfIncorrectType() {
-        final Schema schema = SchemaBuilder.struct()
-            .field(FIELD, Schema.STRING_SCHEMA)
-            .build();
-        final SinkRecord originalRecord = record(null, new Struct(schema).put(FIELD, "aaa"));
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be INT64 or org.apache.kafka.connect.data.Timestamp: "
-                + originalRecord,
-            e.getMessage());
-    }
-
-    @Test
-    void mapWithFieldOfIncorrectType() {
-        final HashMap<Object, Object> valueMap = new HashMap<>();
-        valueMap.put(FIELD, "aaa");
-        final SinkRecord originalRecord = record(null, valueMap);
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be INT64 or org.apache.kafka.connect.data.Timestamp: "
-                + originalRecord,
-            e.getMessage());
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void structWithIntField(final boolean optional) {
-        final Schema schema;
-        if (optional) {
-            schema = SchemaBuilder.struct()
-                .field(FIELD, Schema.OPTIONAL_INT64_SCHEMA)
-                .build();
-        } else {
-            schema = SchemaBuilder.struct()
-                .field(FIELD, Schema.INT64_SCHEMA)
-                .build();
-        }
-        final long timestamp = 11363151277L;
-        final SinkRecord originalRecord = record(null, new Struct(schema).put(FIELD, timestamp));
-        final SinkRecord transformedRecord = transformation().apply(originalRecord);
-        assertEquals(setNewTimestamp(originalRecord, timestamp), transformedRecord);
-    }
-
-    @Test
-    void mapWithIntField() {
-        final long timestamp = 11363151277L;
-        final HashMap<Object, Object> valueMap = new HashMap<>();
-        valueMap.put(FIELD, timestamp);
-        final SinkRecord originalRecord = record(null, valueMap);
-        final SinkRecord transformedRecord = transformation().apply(originalRecord);
-        assertEquals(setNewTimestamp(originalRecord, timestamp), transformedRecord);
-    }
-
-    @Test
-    void structWithTimestampField() {
-        final Schema schema = SchemaBuilder.struct()
-            .field(FIELD, Timestamp.SCHEMA)
-            .build();
-        final long timestamp = 11363151277L;
-        final SinkRecord originalRecord = record(null, new Struct(schema).put(FIELD, new Date(timestamp)));
-        final SinkRecord transformedRecord = transformation().apply(originalRecord);
-        assertEquals(setNewTimestamp(originalRecord, timestamp), transformedRecord);
-    }
-
-    @Test
-    void mapWithTimestampField() {
-        final long timestamp = 11363151277L;
-        final HashMap<Object, Object> valueMap = new HashMap<>();
-        valueMap.put(FIELD, new Date(timestamp));
-        final SinkRecord originalRecord = record(null, valueMap);
-        final SinkRecord transformedRecord = transformation().apply(originalRecord);
-        assertEquals(setNewTimestamp(originalRecord, timestamp), transformedRecord);
-    }
-
-    private ExtractTimestamp<SinkRecord> transformation() {
-        final Map<String, String> props = new HashMap<>();
-        props.put("field.name", FIELD);
-        final ExtractTimestamp<SinkRecord> transform = new ExtractTimestamp.Value<>();
-        transform.configure(props);
-        return transform;
-    }
-
-    private SinkRecord record(final Schema valueSchema, final Object value) {
-        return new SinkRecord("original_topic", 0,
-            null, null,
-            valueSchema, value,
-            123L,
-            456L, TimestampType.CREATE_TIME);
-    }
-
-    private SinkRecord setNewTimestamp(final SinkRecord record, final long newTimestamp) {
-        return record.newRecord(record.topic(),
-            record.kafkaPartition(),
-            record.keySchema(),
-            record.key(),
-            record.valueSchema(),
-            record.value(),
-            newTimestamp,
-            record.headers()
-        );
+    @Override
+    protected SinkRecord record(final Schema schema, final Object data) {
+        return record(null, null, schema, data);
     }
 }
