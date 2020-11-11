@@ -73,8 +73,13 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
         }
 
         final long newTimestamp;
-        if (fieldValue instanceof Long) {
-            newTimestamp = (long) fieldValue;
+        if (fieldValue instanceof Long) {            
+            if ((long) fieldValue < 10000000000L) {
+                newTimestamp = (long) fieldValue * 1000L;
+            } else {
+                newTimestamp = (long) fieldValue;
+            }
+
         } else if (fieldValue instanceof Date) {
             newTimestamp = ((Date) fieldValue).getTime();
         } else {
@@ -102,7 +107,7 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
 
     protected abstract SchemaAndValue getSchemaAndValue(final R record);
 
-    public static class Key<R extends ConnectRecord<R>> extends Hash<R> {
+    public static class Key<R extends ConnectRecord<R>> extends ExtractTimestamp<R> {
         @Override
         protected SchemaAndValue getSchemaAndValue(final R record) {
             return new SchemaAndValue(record.keySchema(), record.key());
