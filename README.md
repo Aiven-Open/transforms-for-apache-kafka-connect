@@ -17,8 +17,9 @@ The transformation:
 - expects it to have a specified field;
 - expects the value of the field to be either `INT64` or `org.apache.kafka.connect.data.Timestamp` and not be `null`.
 
-Exists in one variant:
+Exists in two variants:
 - `io.aiven.kafka.connect.transforms.ExtractTimestamp$Value` - works on values.
+- `io.aiven.kafka.connect.transforms.ExtractTimestamp$Key` - works on keys.
 
 The transformation defines the following configurations:
 
@@ -28,6 +29,7 @@ Here's an example of this transformation configuration:
 
 ```properties
 transforms=ExtractTimestampFromValueField
+transforms.ExtractTimestampFromValueField.type=io.aiven.kafka.connect.transforms.ExtractTimestamp$Value
 transforms.ExtractTimestampFromValueField.field.name=inner_field_name
 ```
 
