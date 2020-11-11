@@ -21,15 +21,12 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
+import org.apache.kafka.connect.data.SchemaAndValue;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.transforms.Transformation;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Transformation<R> {
-    private static final Logger log = LoggerFactory.getLogger(ExtractTimestamp.class);
 
     private ExtractTimestampConfig config;
 
@@ -45,23 +42,25 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
 
     @Override
     public R apply(final R record) {
-        if (record.value() == null) {
-            throw new DataException("Value can't be null: " + record);
+        final SchemaAndValue schemaAndValue = getSchemaAndValue(record);
+        
+        if (schemaAndValue.value() == null) {
+            throw new DataException(keyOrValue() + " can't be null: " + record);
         }
 
         final Object fieldValue;
-        if (record.value() instanceof Struct) {
-            final Struct struct = (Struct) record.value();
+        if (schemaAndValue.value() instanceof Struct) {
+            final Struct struct = (Struct) schemaAndValue.value();
             if (struct.schema().field(config.fieldName()) == null) {
                 throw new DataException(config.fieldName() + " field must be present and its value can't be null: "
                     + record);
             }
             fieldValue = struct.get(config.fieldName());
-        } else if (record.value() instanceof Map) {
-            final Map map = (Map) record.value();
+        } else if (schemaAndValue.value() instanceof Map) {
+            final Map<?, ?> map = (Map<?, ?>) schemaAndValue.value();
             fieldValue = map.get(config.fieldName());
         } else {
-            throw new DataException("Value type must be STRUCT or MAP: " + record);
+            throw new DataException(keyOrValue() + " type must be STRUCT or MAP: " + record);
         }
 
         if (fieldValue == null) {
@@ -91,13 +90,36 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
         );
     }
 
-    public static final class Value<R extends ConnectRecord<R>> extends ExtractTimestamp<R> {
-        // There's an implementation only for value, not for key.
-        // We provide $Value class anyway for the consistency sake
-        // and in case we need a $Key version in the future as well.
-    }
-
     @Override
     public void close() {
     }
+
+    protected abstract String keyOrValue();
+
+    protected abstract SchemaAndValue getSchemaAndValue(final R record);
+
+    public static final class Key<R extends ConnectRecord<R>> extends ExtractTimestamp<R> {
+        @Override
+        protected SchemaAndValue getSchemaAndValue(final R record) {
+            return new SchemaAndValue(record.keySchema(), record.key());
+        }
+
+        @Override
+        protected String keyOrValue() {
+            return "key";
+        }
+    }
+
+    public static final class Value<R extends ConnectRecord<R>> extends ExtractTimestamp<R> {
+        @Override
+        protected SchemaAndValue getSchemaAndValue(final R record) {
+            return new SchemaAndValue(record.valueSchema(), record.value());
+        }
+
+        @Override
+        protected String keyOrValue() {
+            return "value";
+        }
+    }
+    
 }
