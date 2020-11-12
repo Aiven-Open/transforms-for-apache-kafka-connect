@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Aiven Oy
+ * Copyright 2020 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.transforms;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -27,6 +28,12 @@ final class ExtractTimestampConfig extends AbstractConfig {
         "The name of the field is to be used as the source of timestamp. "
             + "The field must have INT64 or org.apache.kafka.connect.data.Timestamp type "
             + "and must mot be null.";
+    public static final String EPOCH_RESOLUTION_CONFIG = "field.timestamp.resolution";
+    private static final String EPOCH_RESOLUTION_DOC = 
+        "Time resolution used for INT64 type field. "
+        + "Valid values are \"s\" for seconds since epoch and \"ms\" for "
+        + "milliseconds since epoch. Default is \"ms\" and ignored for "
+        + "org.apache.kafka.connect.data.Timestamp type.";
 
     ExtractTimestampConfig(final Map<?, ?> originals) {
         super(config(), originals);
@@ -40,10 +47,25 @@ final class ExtractTimestampConfig extends AbstractConfig {
                 ConfigDef.NO_DEFAULT_VALUE,
                 new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.HIGH,
-                FIELD_NAME_DOC);
+                FIELD_NAME_DOC)
+            .define(
+                EPOCH_RESOLUTION_CONFIG,
+                ConfigDef.Type.STRING,
+                "ms",
+                new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.LOW,
+                EPOCH_RESOLUTION_DOC);
     }
 
     final String fieldName() {
         return getString(FIELD_NAME_CONFIG);
+    }
+
+    final Optional<String> timestampResolution() {
+        final String rawTimestampResolution = getString(EPOCH_RESOLUTION_CONFIG);
+        if (null == rawTimestampResolution || "".equals(rawTimestampResolution)) {
+            return Optional.empty();
+        }
+        return Optional.of(rawTimestampResolution);        
     }
 }
