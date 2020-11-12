@@ -74,7 +74,8 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
 
         final long newTimestamp;
         if (fieldValue instanceof Long) {
-            if (config.timestampResolution().isPresent() && "s".equals(config.timestampResolution().get())) {            
+            if (config.timestampResolution().isPresent() 
+                && "s".equals(config.timestampResolution().get())) {            
                 newTimestamp = (long) fieldValue * 1000L;
             } else {
                 newTimestamp = (long) fieldValue;
