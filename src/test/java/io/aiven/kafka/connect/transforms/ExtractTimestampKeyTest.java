@@ -19,20 +19,20 @@ package io.aiven.kafka.connect.transforms;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.sink.SinkRecord;
 
-public class ExtractTimestampValueTest extends ExtractTimestampTest {
+public class ExtractTimestampKeyTest extends ExtractTimestampTest {
 
     @Override
     protected String keyOrValue() {
-        return "value";
+        return "key";
     }
 
     @Override
     protected ExtractTimestamp<SinkRecord> createTransformationObject() {
-        return new ExtractTimestamp.Value<>();
+        return new ExtractTimestamp.Key<>();
     }
 
     @Override
     protected SinkRecord record(final Schema schema, final Object data) {
-        return record(null, null, schema, data);
+        return record(schema, data, null, null);
     }
 }
