@@ -51,4 +51,52 @@ class ExtractTimestampConfigTest {
         final ExtractTimestampConfig config = new ExtractTimestampConfig(props);
         assertEquals("test", config.fieldName());
     }
+
+    @Test
+    void emptyTimestampResolution() {
+        final var props = new HashMap<>();
+        props.put("field.name", "test");
+        final var config = new ExtractTimestampConfig(props);
+        assertEquals(ExtractTimestampConfig.TimestampResolution.MILLISECONDS, config.timestampResolution());
+    }
+
+    @Test
+    void definedTimestampResolutionInSeconds() {
+        final var props = new HashMap<>();
+        props.put("field.name", "test");
+        props.put(
+                ExtractTimestampConfig.EPOCH_RESOLUTION_CONFIG,
+                ExtractTimestampConfig.TimestampResolution.SECONDS.resolution
+        );
+        final var config = new ExtractTimestampConfig(props);
+        assertEquals(ExtractTimestampConfig.TimestampResolution.SECONDS, config.timestampResolution());
+    }
+
+    @Test
+    void definedTimestampResolutionInMillis() {
+        final var props = new HashMap<>();
+        props.put("field.name", "test");
+        props.put(
+                ExtractTimestampConfig.EPOCH_RESOLUTION_CONFIG,
+                ExtractTimestampConfig.TimestampResolution.MILLISECONDS.resolution
+        );
+        final var config = new ExtractTimestampConfig(props);
+        assertEquals(ExtractTimestampConfig.TimestampResolution.MILLISECONDS, config.timestampResolution());
+    }
+
+    @Test
+    void wrongTimestampResolution() {
+        final var props = new HashMap<>();
+        props.put("field.name", "test");
+        props.put(
+                ExtractTimestampConfig.EPOCH_RESOLUTION_CONFIG,
+                "foo"
+        );
+        final var e = assertThrows(ConfigException.class, () -> new ExtractTimestampConfig(props));
+        assertEquals(
+                "Invalid value foo for configuration timestamp.resolution: "
+                        + "Unsupported resolution type 'foo'. Supported are: milliseconds, seconds",
+                e.getMessage());
+    }
+
 }
