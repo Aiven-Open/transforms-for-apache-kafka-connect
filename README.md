@@ -22,8 +22,12 @@ Exists in two variants:
  - `io.aiven.kafka.connect.transforms.ExtractTimestamp$Value` - works on values.
 
 The transformation defines the following configurations:
-
 - `field.name` - The name of the field which should be used as the new timestamp. Cannot be `null` or empty.
+- `timestamp.resolution` - The timestamp resolution for key or value   
+   There are two possible values: 
+    - `milliseconds` - key or value timestamp in milliseconds
+    - `seconds` - key or value timestamp in seconds and will be converted in milliseconds,  
+    the default is `milliseconds`.
 
 Here's an example of this transformation configuration:
 

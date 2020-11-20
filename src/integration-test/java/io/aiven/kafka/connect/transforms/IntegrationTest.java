@@ -90,10 +90,10 @@ final class IntegrationTest {
         final File integrationTestClassesPath = new File(System.getProperty("integration-test.classes.path"));
         assert integrationTestClassesPath.exists();
 
-        final Class[] testConnectorClasses = new Class[]{
+        final Class<?>[] testConnectorClasses = new Class[]{
             TestSourceConnector.class, TestSourceConnector.TestSourceConnectorTask.class
         };
-        for (final Class clazz : testConnectorClasses) {
+        for (final Class<?> clazz : testConnectorClasses) {
             final String packageName = clazz.getPackage().getName();
             final String packagePrefix = packageName + ".";
             assert clazz.getCanonicalName().startsWith(packagePrefix);

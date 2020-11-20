@@ -18,6 +18,7 @@ package io.aiven.kafka.connect.transforms;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
@@ -70,9 +71,15 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
 
         final long newTimestamp;
         if (fieldValue instanceof Long) {
-            newTimestamp = (long) fieldValue;
+            final var longFieldValue = (long) fieldValue;
+            if (config.timestampResolution() == ExtractTimestampConfig.TimestampResolution.SECONDS) {
+                newTimestamp = TimeUnit.SECONDS.toMillis(longFieldValue);
+            } else {
+                newTimestamp = longFieldValue;
+            }
         } else if (fieldValue instanceof Date) {
-            newTimestamp = ((Date) fieldValue).getTime();
+            final var dateFieldValue = (Date) fieldValue;
+            newTimestamp = dateFieldValue.getTime();
         } else {
             throw new DataException(config.fieldName()
                 + " field must be INT64 or org.apache.kafka.connect.data.Timestamp: "
