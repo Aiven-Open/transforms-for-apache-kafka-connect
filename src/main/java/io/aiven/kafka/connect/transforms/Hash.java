@@ -71,36 +71,16 @@ public abstract class Hash<R extends ConnectRecord<R>> implements Transformation
         }
     }
 
-    @Override
-    public R apply(final R record) {
-        final SchemaAndValue schemaAndValue = getSchemaAndValue(record);
-        if (schemaAndValue.schema() == null) {
-            throw new DataException(dataPlace() + " schema can't be null: " + record);
-        }
-
+    public final Optional<Object> getNewValue(final R record, final SchemaAndValue schemaAndValue) {
         final Optional<Object> newValue;
         if (config.fieldName().isPresent()) {
             newValue = getNewValueForNamedField(
-                    record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.fieldName().get());
+                record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.fieldName().get());
         } else {
             newValue = getNewValueWithoutFieldName(
-                    record.toString(), schemaAndValue.schema(), schemaAndValue.value());
+                record.toString(), schemaAndValue.schema(), schemaAndValue.value());
         }
-
-        if (newValue.isPresent()) {
-            return record.newRecord(
-                    record.topic(),
-                    record.kafkaPartition(),
-                    record.keySchema(),
-                    record.key(),
-                    record.valueSchema(),
-                    newValue.get(),
-                    record.timestamp(),
-                    record.headers()
-            );
-        } else {
-            return record;
-        }
+        return newValue;
     }
 
     @Override
@@ -191,6 +171,31 @@ public abstract class Hash<R extends ConnectRecord<R>> implements Transformation
         }
 
         @Override
+        public R apply(final R record) {
+            final SchemaAndValue schemaAndValue = getSchemaAndValue(record);
+            if (schemaAndValue.schema() == null) {
+                throw new DataException(dataPlace() + " schema can't be null: " + record);
+            }
+
+            final Optional<Object> newValue = getNewValue(record, schemaAndValue);
+
+            if (newValue.isPresent()) {
+                return record.newRecord(
+                    record.topic(),
+                    record.kafkaPartition(),
+                    record.keySchema(),
+                    newValue.get(),
+                    record.valueSchema(),
+                    record.value(),
+                    record.timestamp(),
+                    record.headers()
+                );
+            } else {
+                return record;
+            }
+        }
+
+        @Override
         protected String dataPlace() {
             return "key";
         }
@@ -200,6 +205,31 @@ public abstract class Hash<R extends ConnectRecord<R>> implements Transformation
         @Override
         protected SchemaAndValue getSchemaAndValue(final R record) {
             return new SchemaAndValue(record.valueSchema(), record.value());
+        }
+
+        @Override
+        public R apply(final R record) {
+            final SchemaAndValue schemaAndValue = getSchemaAndValue(record);
+            if (schemaAndValue.schema() == null) {
+                throw new DataException(dataPlace() + " schema can't be null: " + record);
+            }
+
+            final Optional<Object> newValue = getNewValue(record, schemaAndValue);
+
+            if (newValue.isPresent()) {
+                return record.newRecord(
+                    record.topic(),
+                    record.kafkaPartition(),
+                    record.keySchema(),
+                    record.key(),
+                    record.valueSchema(),
+                    newValue.get(),
+                    record.timestamp(),
+                    record.headers()
+                );
+            } else {
+                return record;
+            }
         }
 
         @Override
