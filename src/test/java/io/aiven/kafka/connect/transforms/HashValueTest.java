@@ -35,4 +35,17 @@ public class HashValueTest extends HashTest {
     protected SinkRecord record(final Schema schema, final Object data) {
         return record(null, null, schema, data);
     }
+
+    @Override
+    protected SinkRecord setNewValue(final SinkRecord record, final Object newValue) {
+        return record.newRecord(record.topic(),
+            record.kafkaPartition(),
+            record.keySchema(),
+            record.key(),
+            record.valueSchema(),
+            newValue,
+            record.timestamp(),
+            record.headers()
+        );
+    }
 }

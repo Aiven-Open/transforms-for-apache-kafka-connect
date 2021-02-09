@@ -287,6 +287,8 @@ abstract class HashTest {
 
     protected abstract Hash<SinkRecord> createTransformationObject();
 
+    protected abstract SinkRecord setNewValue(final SinkRecord record, final Object newValue);
+
     protected abstract SinkRecord record(final Schema schema, final Object data);
 
     protected SinkRecord record(final Schema keySchema,
@@ -298,18 +300,6 @@ abstract class HashTest {
                 valueSchema, value,
                 123L,
                 456L, TimestampType.CREATE_TIME);
-    }
-
-    private SinkRecord setNewValue(final SinkRecord record, final Object newValue) {
-        return record.newRecord(record.topic(),
-                record.kafkaPartition(),
-                record.keySchema(),
-                record.key(),
-                record.valueSchema(),
-                newValue,
-                record.timestamp(),
-                record.headers()
-        );
     }
 
     private String hash(final String function, final String value) {
