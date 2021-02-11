@@ -104,6 +104,33 @@ transforms.TombstoneHandler.type=io.aiven.kafka.connect.transforms.TombstoneHand
 transforms.TombstoneHandler.behavior=drop_silent
 ```
 
+### `ConcatField`
+
+This transformation adds a new field to the message with a key of type string and a value of string which is the
+concatenation of the requested fields.
+
+Exists in two variants:
+
+ - `io.aiven.kafka.connect.transforms.ConcatField$Key` - works on keys;
+ - `io.aiven.kafka.connect.transforms.ConcatField$Value` - works on values.
+
+The transformation defines the following configurations:
+ - `field.names` - A comma-separated list of fields to concatenate.
+ - `output.field.name` - The name of field the concatenated value should be placed into.
+ - `delimiter` - The string which should be used to join the extracted fields.
+ - `field.replace.missing` - The string which should be used when a field is not found or its value is null.
+
+Here is an example of this transformation configuration:
+
+```
+transforms=ConcatField
+transforms.ConcatField.type=io.aiven.kafka.connect.transforms.ConcatField$Value
+transforms.ConcatField.field.names=["test","foo","bar","age"]
+transforms.ConcatField.output.field.name="combined"
+transforms.ConcatField.delimiter="-"
+transforms.ConcatField.field.replace.missing="*"
+```
+
 ## License
 
 This project is licensed under the [Apache License, Version 2.0](LICENSE).
