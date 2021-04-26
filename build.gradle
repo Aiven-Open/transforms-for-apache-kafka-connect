@@ -43,6 +43,7 @@ targetCompatibility = JavaVersion.VERSION_11
 ext {
     kafkaVersion = "2.0.1"
     testcontainersVersion = "1.15.1"
+    debeziumVersion = "1.3.0.Final"
 }
 
 distributions {
@@ -77,6 +78,7 @@ configurations {
 
 dependencies {
     compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
+    compileOnly "io.debezium:debezium-api:$debeziumVersion"
 
     implementation "org.slf4j:slf4j-api:1.7.25"
 
@@ -84,6 +86,7 @@ dependencies {
     testImplementation "org.hamcrest:hamcrest:2.1"
     testImplementation "org.apache.kafka:connect-api:$kafkaVersion"
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+    testImplementation "io.debezium:debezium-api:$debeziumVersion"
 
     testRuntime "org.apache.logging.log4j:log4j-slf4j-impl:2.12.1"
     testRuntime "org.apache.logging.log4j:log4j-api:2.12.1"
