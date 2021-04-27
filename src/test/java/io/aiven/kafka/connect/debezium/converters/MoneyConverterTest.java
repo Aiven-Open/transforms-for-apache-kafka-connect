@@ -22,7 +22,7 @@ import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 
 import io.aiven.kafka.connect.debezium.converters.utils.DummyRelationalColumn;
-import io.aiven.kafka.connect.debezium.converters.utils.MoneyRelationalColumn;
+import io.aiven.kafka.connect.debezium.converters.utils.MoneyTestRelationalColumn;
 
 import io.debezium.spi.converter.CustomConverter;
 import org.junit.jupiter.api.AfterEach;
@@ -58,14 +58,14 @@ public class MoneyConverterTest {
     void shouldRegisterCorrectSchema() {
         transform.configure(prop);
         assertNull(registration.currFieldSchema);
-        transform.converterFor(new MoneyRelationalColumn(), registration);
+        transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
         assertEquals(registration.currFieldSchema.schema().name(), "price");
         assertEquals(registration.currFieldSchema.schema().type(), Schema.Type.STRING);
     }
 
     @Test
-    void shouldDoNothingIfColumnIsNotAMoney() {
+    void shouldDoNothingIfColumnIsNotMoney() {
         transform.configure(prop);
 
         transform.converterFor(new DummyRelationalColumn(), registration);
@@ -77,7 +77,7 @@ public class MoneyConverterTest {
     @Test
     void shouldFormatDataToMoneyFormat() {
         assertNull(registration.currConverter);
-        transform.converterFor(new MoneyRelationalColumn(), registration);
+        transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
         final String result = (String) registration.currConverter.convert((float) 103.6999);
         assertEquals(result, "103.70");
@@ -86,10 +86,22 @@ public class MoneyConverterTest {
     @Test
     void shouldReturnIfDataIsMissing() {
         assertNull(registration.currConverter);
-        transform.converterFor(new MoneyRelationalColumn(), registration);
+        transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
         final String result = (String) registration.currConverter.convert(null);
         assertEquals(result, "nu");
+    }
+
+    @Test
+    void shouldDoNothingIfColumnIsOptional() {
+        transform.configure(prop);
+        final MoneyTestRelationalColumn moneyColumn = new MoneyTestRelationalColumn();
+        moneyColumn.isOptional = true;
+
+        transform.converterFor(moneyColumn, registration);
+
+        final String result = (String) registration.currConverter.convert(null);
+        assertNull(result);
     }
 
     class StubConverterRegistration implements CustomConverter.ConverterRegistration<SchemaBuilder> {

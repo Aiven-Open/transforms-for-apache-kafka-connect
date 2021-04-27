@@ -21,7 +21,9 @@ import java.util.OptionalInt;
 import io.debezium.spi.converter.RelationalColumn;
 
 
-public class MoneyRelationalColumn implements RelationalColumn {
+public class MoneyTestRelationalColumn implements RelationalColumn {
+
+    public boolean isOptional = false;
 
     @Override
     public int jdbcType() {
@@ -55,7 +57,7 @@ public class MoneyRelationalColumn implements RelationalColumn {
 
     @Override
     public boolean isOptional() {
-        return false;
+        return isOptional;
     }
 
     @Override
