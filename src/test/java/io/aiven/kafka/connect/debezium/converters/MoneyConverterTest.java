@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.connect.debezium.converters;
 
+import java.math.BigDecimal;
 import java.util.Properties;
 
 import org.apache.kafka.connect.data.Schema;
@@ -80,7 +81,7 @@ public class MoneyConverterTest {
         assertNull(registration.currConverter);
         transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
-        final String result = (String) registration.currConverter.convert((float) 103.6999);
+        final String result = (String) registration.currConverter.convert(BigDecimal.valueOf(103.6999));
         assertEquals(result, "103.70");
 
         final String result2 = (String) registration.currConverter.convert((long) 103);
@@ -88,7 +89,17 @@ public class MoneyConverterTest {
     }
 
     @Test
-    void shouldReturnIfDataIsMissing() {
+    void shouldFailIfDataIsNotBigDecimal() {
+        assertNull(registration.currConverter);
+        transform.converterFor(new MoneyTestRelationalColumn(), registration);
+
+        final Throwable e = assertThrows(IllegalArgumentException.class,
+            () -> registration.currConverter.convert("103.6999"));
+        assertEquals(e.getMessage(), "Money type should have BigDecimal type");
+    }
+
+    @Test
+    void shouldFailIfDataIsMissing() {
         assertNull(registration.currConverter);
         transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
