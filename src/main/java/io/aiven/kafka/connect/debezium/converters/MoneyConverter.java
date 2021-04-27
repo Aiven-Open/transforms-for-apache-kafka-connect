@@ -44,10 +44,12 @@ public class MoneyConverter implements CustomConverter<SchemaBuilder, Relational
                 if (data == null) {
                     if (column.isOptional()) {
                         return null;
+                    } else {
+                        throw new IllegalArgumentException("Money column is not optional, but data is null");
                     }
                 }
 
-                return String.format("%.2f", data);
+                return String.format("%.2f", ((Number) data).floatValue());
             });
         }
     }

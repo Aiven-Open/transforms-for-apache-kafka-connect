@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class MoneyConverterTest {
 
@@ -81,6 +82,9 @@ public class MoneyConverterTest {
 
         final String result = (String) registration.currConverter.convert((float) 103.6999);
         assertEquals(result, "103.70");
+
+        final String result2 = (String) registration.currConverter.convert((long) 103);
+        assertEquals(result2, "103.00");
     }
 
     @Test
@@ -88,8 +92,9 @@ public class MoneyConverterTest {
         assertNull(registration.currConverter);
         transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
-        final String result = (String) registration.currConverter.convert(null);
-        assertEquals(result, "nu");
+        final Throwable e = assertThrows(IllegalArgumentException.class,
+            () -> registration.currConverter.convert(null));
+        assertEquals(e.getMessage(), "Money column is not optional, but data is null");
     }
 
     @Test
