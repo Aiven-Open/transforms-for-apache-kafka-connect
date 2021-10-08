@@ -135,7 +135,7 @@ test {
 }
 
 processResources {
-    filesMatching('aiven-kafka-connect-transforms-version.properties') {
+    filesMatching('transforms-for-apache-kafka-connect-version.properties') {
         expand(version: version)
     }
 }
@@ -239,7 +239,7 @@ task releasePush() {
     }
 
     doLast {
-        def githubRepo = 'https://github.com/aiven/aiven-kafka-connect-transforms'
+        def githubRepo = 'https://github.com/aiven/transforms-for-apache-kafka-connect'
 
         grgit.push(tags: false, dryRun: false)
         grgit.push(tags: true, dryRun: false)

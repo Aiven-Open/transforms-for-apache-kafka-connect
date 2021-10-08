@@ -1,8 +1,6 @@
-# Aiven Kafka Connect Transformations
+# Aiven Transformations for Apache Kafka Connect
 
-[![Build Status](https://travis-ci.org/aiven/aiven-kafka-connect-transforms.svg?branch=master)](https://travis-ci.org/aiven/aiven-kafka-connect-transforms)
-
-This is a set of [Kafka Connect transformations](https://kafka.apache.org/documentation/#connect_transforms).
+A collection of [Single Message Transformations (SMTs)](https://kafka.apache.org/documentation/#connect_transforms) for Apache Kafka Connect.
 
 ## Transformations
 
