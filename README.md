@@ -1,4 +1,4 @@
-# Aiven Transformations for Apache Kafka Connect
+# Aiven Transformations for Apache Kafka® Connect
 
 A collection of [Single Message Transformations (SMTs)](https://kafka.apache.org/documentation/#connect_transforms) for Apache Kafka Connect.
 
@@ -132,3 +132,7 @@ transforms.ConcatFields.field.replace.missing="*"
 ## License
 
 This project is licensed under the [Apache License, Version 2.0](LICENSE).
+
+## Trademarks
+
+Apache Kafka and Apache Kafka Connect are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries.
