@@ -94,7 +94,7 @@ dependencies {
     compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
     compileOnly "io.debezium:debezium-api:$debeziumVersion"
 
-    implementation "org.slf4j:slf4j-api:1.7.33"
+    implementation "org.slf4j:slf4j-api:1.7.36"
 
     testImplementation "org.junit.jupiter:junit-jupiter:5.8.2"
     testImplementation "org.hamcrest:hamcrest:2.2"
