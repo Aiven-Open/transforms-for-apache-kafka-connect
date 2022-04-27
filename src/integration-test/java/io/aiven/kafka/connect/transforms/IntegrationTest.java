@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -58,7 +59,7 @@ final class IntegrationTest {
     private static File pluginsDir;
 
     @Container
-    private final KafkaContainer kafka = new KafkaContainer()
+    private final KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:6.2.1"))
         .withEnv("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "false");
 
     private AdminClient adminClient;
