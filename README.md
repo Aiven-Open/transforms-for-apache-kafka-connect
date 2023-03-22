@@ -129,6 +129,18 @@ transforms.ConcatFields.delimiter="-"
 transforms.ConcatFields.field.replace.missing="*"
 ```
 
+### `MakeTombstone`
+
+This transformation converts a record into a tombstone by setting its value and value schema to `null`.
+
+It can be used together with predicates, for example, to create a tombstone event from a delete event produced by a source connector.
+
+Here is an example of this transformation configuration:
+```properties
+transforms=MakeTombstone
+transforms.MakeTombstone.type=io.aiven.kafka.connect.transforms.MakeTombstone
+```
+
 ## License
 
 This project is licensed under the [Apache License, Version 2.0](LICENSE).
