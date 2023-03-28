@@ -16,8 +16,11 @@
 
 package io.aiven.kafka.connect.transforms;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import org.apache.kafka.common.config.AbstractConfig;
@@ -49,12 +52,12 @@ public class FilterByFieldValue<R extends ConnectRecord<R>> implements Transform
     }
 
     private R handleStruct(final R record) {
-        Struct struct = (Struct) record.value();
+        final Struct struct = (Struct) record.value();
         final Optional<String> fieldValue = extractStructFieldValue(struct, fieldName);
         return filterCondition.test(fieldValue) ? record : null;
     }
 
-    private Optional<String> extractStructFieldValue(Struct struct, String fieldName) {
+    private Optional<String> extractStructFieldValue(final Struct struct, final String fieldName) {
         final Schema schema = struct.schema();
         final Field field = schema.field(fieldName);
         final Object fieldValue = struct.get(field);
@@ -75,22 +78,29 @@ public class FilterByFieldValue<R extends ConnectRecord<R>> implements Transform
         return filterCondition.test(fieldValue) ? record : null;
     }
 
-    private Optional<String> extractMapFieldValue(Map<String, Object> map, String fieldName) {
-        if (!map.containsKey(fieldName)) return Optional.empty();
+    private Optional<String> extractMapFieldValue(final Map<String, Object> map, final String fieldName) {
+        if (!map.containsKey(fieldName)) {
+            return Optional.empty();
+        }
 
         final Object fieldValue = map.get(fieldName);
 
         Optional<String> text = Optional.empty();
-        if (fieldValue instanceof String
-                || fieldValue instanceof Long
-                || fieldValue instanceof Integer
-                || fieldValue instanceof Short
-                || fieldValue instanceof Double
-                || fieldValue instanceof Float
-                || fieldValue instanceof Boolean) {
+        if (isSupportedType(fieldValue)) {
             text = Optional.of(fieldValue.toString());
         }
         return text;
+    }
+
+    private boolean isSupportedType(final Object fieldValue) {
+        final Set<Class<?>> supportedTypes = new HashSet<>(
+                Arrays.asList(
+                        String.class, Long.class, Integer.class, Short.class,
+                        Double.class, Float.class, Boolean.class
+                )
+        );
+
+        return supportedTypes.contains(fieldValue.getClass());
     }
 
     @Override
@@ -98,16 +108,20 @@ public class FilterByFieldValue<R extends ConnectRecord<R>> implements Transform
         return new ConfigDef()
                 .define("field.name",
                         ConfigDef.Type.STRING,
-                        ConfigDef.Importance.HIGH, "The field name to filter by")
+                        ConfigDef.Importance.HIGH,
+                        "The field name to filter by")
                 .define("field.value",
                         ConfigDef.Type.STRING, null,
-                        ConfigDef.Importance.HIGH, "Expected value to match. Either define this, or a regex pattern")
+                        ConfigDef.Importance.HIGH,
+                        "Expected value to match. Either define this, or a regex pattern")
                 .define("field.value.pattern",
                         ConfigDef.Type.STRING, null,
-                        ConfigDef.Importance.HIGH, "The pattern to match. Either define this, or an expected value")
+                        ConfigDef.Importance.HIGH,
+                        "The pattern to match. Either define this, or an expected value")
                 .define("field.value.matches",
                         ConfigDef.Type.BOOLEAN, true,
-                        ConfigDef.Importance.MEDIUM, "The filter mode, 'true' for matching or 'false' for non-matching");
+                        ConfigDef.Importance.MEDIUM,
+                        "The filter mode, 'true' for matching or 'false' for non-matching");
     }
 
     @Override
@@ -120,19 +134,20 @@ public class FilterByFieldValue<R extends ConnectRecord<R>> implements Transform
         this.fieldName = config.getString("field.name");
         this.fieldExpectedValue = Optional.ofNullable(config.getString("field.value"));
         this.fieldValuePattern = Optional.ofNullable(config.getString("field.value.pattern"));
-        boolean expectedValuePresent = fieldExpectedValue.map(s -> !s.isEmpty()).orElse(false);
-        boolean regexPatternPresent = fieldValuePattern.map(s -> !s.isEmpty()).orElse(false);
+        final boolean expectedValuePresent = fieldExpectedValue.map(s -> !s.isEmpty()).orElse(false);
+        final boolean regexPatternPresent = fieldValuePattern.map(s -> !s.isEmpty()).orElse(false);
         if ((expectedValuePresent && regexPatternPresent)
                 || (!expectedValuePresent && !regexPatternPresent)) {
-            throw new ConfigException("Either field.value or field.value.pattern have to be set to apply filter transform");
+            throw new ConfigException(
+                    "Either field.value or field.value.pattern have to be set to apply filter transform");
         }
-        Predicate<Optional<String>> matchCondition = fieldValue -> fieldValue
-                .filter(value -> expectedValuePresent ?
-                        fieldExpectedValue.get().equals(value) :
-                        value.matches(fieldValuePattern.get()))
+        final Predicate<Optional<String>> matchCondition = fieldValue -> fieldValue
+                .filter(value -> expectedValuePresent
+                        ? fieldExpectedValue.get().equals(value)
+                        : value.matches(fieldValuePattern.get()))
                 .isPresent();
         this.filterCondition = config.getBoolean("field.value.matches")
-                ? (matchCondition)
+                ? matchCondition
                 : (result -> !matchCondition.test(result));
     }
 }
