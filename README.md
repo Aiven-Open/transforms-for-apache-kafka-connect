@@ -141,18 +141,22 @@ transforms=MakeTombstone
 transforms.MakeTombstone.type=io.aiven.kafka.connect.transforms.MakeTombstone
 ```
 
-### `FilterByValueRegex`
+### `FilterByFieldValue`
 
-This transformation allows filtering records based on a specific field value and a given regex pattern. The filter supports two modes: equality (equals) and inequality (not_equals).
+This transformation allows filtering records based on a specific field value or a given regex pattern.
 
 Here is an example of this transformation configuration:
+
 ```properties
 transforms=Filter
-transforms.Filter.type=io.aiven.kafka.connect.transforms.FilterByValueRegex
-transforms.Filter.fieldName=<field_name>
-transforms.Filter.pattern=<regex_pattern>
-transforms.Filter.matches=<true|false>
+transforms.Filter.type=io.aiven.kafka.connect.transforms.FilterByFieldValue
+transforms.Filter.field.name=<field_name>
+transforms.Filter.field.value=<field_value>
+transforms.Filter.field.value.pattern=<regex_pattern>
+transforms.Filter.field.value.matches=<true|false>
 ```
+
+Either `field.value` or `field.value.pattern` must be defined to apply filter.
 
 ## License
 

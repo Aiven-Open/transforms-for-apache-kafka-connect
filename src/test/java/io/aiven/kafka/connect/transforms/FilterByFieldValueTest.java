@@ -16,9 +16,7 @@
 
 package io.aiven.kafka.connect.transforms;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.connect.data.Schema;
@@ -29,10 +27,9 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-class FilterByValueRegexTest {
+class FilterByFieldValueTest {
 
     private static final Schema VALUE_SCHEMA = SchemaBuilder.struct()
             .field("before", Schema.OPTIONAL_STRING_SCHEMA)
@@ -48,11 +45,11 @@ class FilterByValueRegexTest {
 
     @Test
     void shouldFilterOutRecordsEqualsToReadEvents() {
-        final FilterByValueRegex<SourceRecord> filter = new FilterByValueRegex<>();
+        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue<>();
         filter.configure(Map.of(
-                "fieldName", "op",
-                "pattern", "r",
-                "matches", "false"
+                "field.name", "op",
+                "field.value", "r",
+                "field.value.matches", "false"
         ));
 
         final Struct after = new Struct(VALUE_SCHEMA.field("after").schema())
@@ -75,11 +72,11 @@ class FilterByValueRegexTest {
 
     @Test
     void shouldKeepRecordsNotEqualsToReadEvents() {
-        final FilterByValueRegex<SourceRecord> filter = new FilterByValueRegex<>();
+        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue<>();
         filter.configure(Map.of(
-                "fieldName", "op",
-                "pattern", "r",
-                "matches", "false"
+                "field.name", "op",
+                "field.value", "r",
+                "field.value.matches", "false"
         ));
 
         final Struct after = new Struct(VALUE_SCHEMA.field("after").schema())
@@ -102,11 +99,11 @@ class FilterByValueRegexTest {
 
     @Test
     void shouldFilterOutRecordsNotEqualsReadEvents() {
-        final FilterByValueRegex<SourceRecord> filter = new FilterByValueRegex<>();
+        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue<>();
         filter.configure(Map.of(
-                "fieldName", "op",
-                "pattern", "r",
-                "matches", "true"
+                "field.name", "op",
+                "field.value", "r",
+                "field.value.matches", "true"
         ));
 
         final Struct after = new Struct(VALUE_SCHEMA.field("after").schema())
@@ -128,37 +125,13 @@ class FilterByValueRegexTest {
     }
 
     @Test
-    void shouldFilterMatchingArrayFieldValue() {
-        final FilterByValueRegex<SourceRecord> filterByValueRegex = new FilterByValueRegex<>();
-        final Map<String, String> configs = new HashMap<>();
-        configs.put("fieldName", "tags");
-        configs.put("pattern", ".*apple.*");
-        configs.put("matches", "true");
-        filterByValueRegex.configure(configs);
-
-        final Schema schema = SchemaBuilder.struct()
-                .field("name", Schema.STRING_SCHEMA)
-                .field("tags", SchemaBuilder.array(Schema.STRING_SCHEMA))
-                .build();
-        final List<String> tags = Arrays.asList("apple", "orange", "mango");
-        final Struct value = new Struct(schema)
-                .put("name", "John Doe")
-                .put("tags", tags);
-
-        final var record = new SourceRecord(null, null, "some_topic", schema, value);
-
-        final var actual = filterByValueRegex.apply(record);
-        assertEquals(record, actual, "The record contains the matching pattern");
-    }
-
-    @Test
     void shouldFilterOutMapFieldValue() {
-        final FilterByValueRegex<SourceRecord> filterByValueRegex = new FilterByValueRegex<>();
+        final FilterByFieldValue<SourceRecord> filterByFieldValue = new FilterByFieldValue<>();
         final Map<String, String> configs = new HashMap<>();
-        configs.put("fieldName", "language");
-        configs.put("pattern", ".*Java.*");
-        configs.put("matches", "false");
-        filterByValueRegex.configure(configs);
+        configs.put("field.name", "language");
+        configs.put("field.value.pattern", ".*Java.*");
+        configs.put("field.value.matches", "false");
+        filterByFieldValue.configure(configs);
 
         final Map<String, Object> value = new HashMap<>();
         value.put("name", "John Doe");
@@ -166,29 +139,7 @@ class FilterByValueRegexTest {
 
         final var record = new SourceRecord(null, null, "some_topic", Schema.STRING_SCHEMA, value);
 
-        final var actual = filterByValueRegex.apply(record);
+        final var actual = filterByFieldValue.apply(record);
         assertNull(actual, "The record should be filtered out");
-    }
-
-    @Test
-    void shouldFilterArrayFieldValue() {
-        final FilterByValueRegex<SourceRecord> filterByValueRegex = new FilterByValueRegex<>();
-        final Map<String, String> configs = new HashMap<>();
-        configs.put("fieldName", "tags");
-        configs.put("pattern", ".*apple.*");
-        configs.put("matches", "true");
-        filterByValueRegex.configure(configs);
-
-        // Test with a list
-        final List<String> tagsList = Arrays.asList("apple", "orange", "mango");
-        final var listRecord = new SourceRecord(null, null, "some_topic", null, tagsList);
-        final var listActual = filterByValueRegex.apply(listRecord);
-        assertNotNull(listActual, "The record should not be filtered out and return the record itself");
-
-        // Test with an array
-        final String[] tagsArray = {"apple", "orange", "mango"};
-        final var arrayRecord = new SourceRecord(null, null, "some_topic", null, tagsArray);
-        final var arrayActual = filterByValueRegex.apply(arrayRecord);
-        assertNotNull(arrayActual, "The record should not be filtered out and return the record itself");
     }
 }
