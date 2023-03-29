@@ -60,12 +60,12 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
     protected abstract Object operatingValue(R record);
 
     private R applyWithSchema(final R record) {
-        final Struct struct = (Struct) record.value();
-        final Optional<String> fieldValue = extractStructFieldValue(struct, fieldName);
+        final Struct struct = (Struct) operatingValue(record);
+        final Optional<String> fieldValue = getStructFieldValue(struct, fieldName);
         return filterCondition.test(fieldValue) ? record : null;
     }
 
-    private Optional<String> extractStructFieldValue(final Struct struct, final String fieldName) {
+    private Optional<String> getStructFieldValue(final Struct struct, final String fieldName) {
         final Schema schema = struct.schema();
         final Field field = schema.field(fieldName);
         final Object fieldValue = struct.get(field);
@@ -81,17 +81,17 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
 
     @SuppressWarnings("unchecked")
     private R applySchemaless(final R record) {
-        if (fieldName.isEmpty()) {
-            final Optional<String> value = extractSchemalessFieldValue(operatingValue(record));
+        if (fieldName == null || fieldName.isEmpty()) {
+            final Optional<String> value = getSchemalessFieldValue(operatingValue(record));
             return filterCondition.test(value) ? record : null;
         } else {
-            final Map<String, Object> map = (Map<String, Object>) record.value();
-            final Optional<String> fieldValue = extractSchemalessFieldValue(map.get(fieldName));
+            final Map<String, Object> map = (Map<String, Object>) operatingValue(record);
+            final Optional<String> fieldValue = getSchemalessFieldValue(map.get(fieldName));
             return filterCondition.test(fieldValue) ? record : null;
         }
     }
 
-    private Optional<String> extractSchemalessFieldValue(final Object fieldValue) {
+    private Optional<String> getSchemalessFieldValue(final Object fieldValue) {
         if (fieldValue == null) return Optional.empty();
         Optional<String> text = Optional.empty();
         if (isSupportedType(fieldValue)) {
@@ -116,18 +116,24 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
         return new ConfigDef()
                 .define("field.name",
                         ConfigDef.Type.STRING,
+                        null,
                         ConfigDef.Importance.HIGH,
-                        "The field name to filter by")
+                        "The field name to filter by." +
+                                "Schema-based records (Avro), schemaless (e.g. JSON), and raw values are supported." +
+                                "If empty, the whole key/value record will be filtered.")
                 .define("field.value",
-                        ConfigDef.Type.STRING, null,
+                        ConfigDef.Type.STRING,
+                        null,
                         ConfigDef.Importance.HIGH,
                         "Expected value to match. Either define this, or a regex pattern")
                 .define("field.value.pattern",
-                        ConfigDef.Type.STRING, null,
+                        ConfigDef.Type.STRING,
+                        null,
                         ConfigDef.Importance.HIGH,
                         "The pattern to match. Either define this, or an expected value")
                 .define("field.value.matches",
-                        ConfigDef.Type.BOOLEAN, true,
+                        ConfigDef.Type.BOOLEAN,
+                        true,
                         ConfigDef.Importance.MEDIUM,
                         "The filter mode, 'true' for matching or 'false' for non-matching");
     }

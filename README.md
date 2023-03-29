@@ -143,7 +143,7 @@ transforms.MakeTombstone.type=io.aiven.kafka.connect.transforms.MakeTombstone
 
 ### `FilterByFieldValue`
 
-This transformation allows filtering records based on a specific field value or a given regex pattern.
+This transformation allows filtering records based either on a specific field or whole value and a matching expected value or regex pattern.
 
 Here is an example of this transformation configuration:
 
@@ -156,7 +156,11 @@ transforms.Filter.field.value.pattern=<regex_pattern>
 transforms.Filter.field.value.matches=<true|false>
 ```
 
+If `field.name` is empty, the whole value is considered for filtering.
+
 Either `field.value` or `field.value.pattern` must be defined to apply filter.
+
+Only, `string`, `numeric` and `boolean` types are considered for matching purposes, other types are ignored.
 
 ## License
 
