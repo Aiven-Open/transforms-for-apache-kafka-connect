@@ -34,7 +34,7 @@ import org.apache.kafka.connect.transforms.Transformation;
 
 import static org.apache.kafka.connect.data.Schema.Type.STRING;
 
-public class FilterByFieldValue<R extends ConnectRecord<R>> implements Transformation<R> {
+public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements Transformation<R> {
 
     private String fieldName;
     private Optional<String> fieldExpectedValue;
@@ -43,15 +43,23 @@ public class FilterByFieldValue<R extends ConnectRecord<R>> implements Transform
 
     @Override
     public R apply(final R record) {
-        if (record.value() instanceof Struct) {
-            return handleStruct(record);
-        } else if (record.value() instanceof Map) {
-            return handleMap(record);
+        if (operatingValue(record) == null) {
+            return record;
         }
-        return record; // if record is other than map or struct, pass-by
+
+        if (operatingSchema(record) == null) {
+            return applySchemaless(record);
+        } else {
+            return applyWithSchema(record);
+        }
     }
 
-    private R handleStruct(final R record) {
+
+    protected abstract Schema operatingSchema(R record);
+
+    protected abstract Object operatingValue(R record);
+
+    private R applyWithSchema(final R record) {
         final Struct struct = (Struct) record.value();
         final Optional<String> fieldValue = extractStructFieldValue(struct, fieldName);
         return filterCondition.test(fieldValue) ? record : null;
@@ -72,19 +80,19 @@ public class FilterByFieldValue<R extends ConnectRecord<R>> implements Transform
     }
 
     @SuppressWarnings("unchecked")
-    private R handleMap(final R record) {
-        final Map<String, Object> map = (Map<String, Object>) record.value();
-        final Optional<String> fieldValue = extractMapFieldValue(map, fieldName);
-        return filterCondition.test(fieldValue) ? record : null;
+    private R applySchemaless(final R record) {
+        if (fieldName.isEmpty()) {
+            final Optional<String> value = extractSchemalessFieldValue(operatingValue(record));
+            return filterCondition.test(value) ? record : null;
+        } else {
+            final Map<String, Object> map = (Map<String, Object>) record.value();
+            final Optional<String> fieldValue = extractSchemalessFieldValue(map.get(fieldName));
+            return filterCondition.test(fieldValue) ? record : null;
+        }
     }
 
-    private Optional<String> extractMapFieldValue(final Map<String, Object> map, final String fieldName) {
-        if (!map.containsKey(fieldName)) {
-            return Optional.empty();
-        }
-
-        final Object fieldValue = map.get(fieldName);
-
+    private Optional<String> extractSchemalessFieldValue(final Object fieldValue) {
+        if (fieldValue == null) return Optional.empty();
         Optional<String> text = Optional.empty();
         if (isSupportedType(fieldValue)) {
             text = Optional.of(fieldValue.toString());
@@ -149,5 +157,32 @@ public class FilterByFieldValue<R extends ConnectRecord<R>> implements Transform
         this.filterCondition = config.getBoolean("field.value.matches")
                 ? matchCondition
                 : (result -> !matchCondition.test(result));
+    }
+
+
+    public static final class Key<R extends ConnectRecord<R>> extends FilterByFieldValue<R> {
+
+        @Override
+        protected Schema operatingSchema(R record) {
+            return record.keySchema();
+        }
+
+        @Override
+        protected Object operatingValue(R record) {
+            return record.key();
+        }
+    }
+
+    public static final class Value<R extends ConnectRecord<R>> extends FilterByFieldValue<R> {
+
+        @Override
+        protected Schema operatingSchema(R record) {
+            return record.valueSchema();
+        }
+
+        @Override
+        protected Object operatingValue(R record) {
+            return record.value();
+        }
     }
 }

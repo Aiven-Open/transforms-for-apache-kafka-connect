@@ -45,7 +45,7 @@ class FilterByFieldValueTest {
 
     @Test
     void shouldFilterOutRecordsEqualsToReadEvents() {
-        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue<>();
+        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Value<>();
         filter.configure(Map.of(
                 "field.name", "op",
                 "field.value", "r",
@@ -72,7 +72,7 @@ class FilterByFieldValueTest {
 
     @Test
     void shouldKeepRecordsNotEqualsToReadEvents() {
-        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue<>();
+        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Value<>();
         filter.configure(Map.of(
                 "field.name", "op",
                 "field.value", "r",
@@ -99,7 +99,7 @@ class FilterByFieldValueTest {
 
     @Test
     void shouldFilterOutRecordsNotEqualsReadEvents() {
-        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue<>();
+        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Value<>();
         filter.configure(Map.of(
                 "field.name", "op",
                 "field.value", "r",
@@ -126,7 +126,7 @@ class FilterByFieldValueTest {
 
     @Test
     void shouldFilterOutMapFieldValue() {
-        final FilterByFieldValue<SourceRecord> filterByFieldValue = new FilterByFieldValue<>();
+        final FilterByFieldValue<SourceRecord> filterByFieldValue = new FilterByFieldValue.Value<>();
         final Map<String, String> configs = new HashMap<>();
         configs.put("field.name", "language");
         configs.put("field.value.pattern", ".*Java.*");
@@ -137,7 +137,7 @@ class FilterByFieldValueTest {
         value.put("name", "John Doe");
         value.put("language", "Java");
 
-        final var record = new SourceRecord(null, null, "some_topic", Schema.STRING_SCHEMA, value);
+        final var record = new SourceRecord(null, null, "some_topic", null, value);
 
         final var actual = filterByFieldValue.apply(record);
         assertNull(actual, "The record should be filtered out");
