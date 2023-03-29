@@ -92,7 +92,9 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
     }
 
     private Optional<String> getSchemalessFieldValue(final Object fieldValue) {
-        if (fieldValue == null) return Optional.empty();
+        if (fieldValue == null) {
+            return Optional.empty();
+        }
         Optional<String> text = Optional.empty();
         if (isSupportedType(fieldValue)) {
             text = Optional.of(fieldValue.toString());
@@ -102,10 +104,10 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
 
     private boolean isSupportedType(final Object fieldValue) {
         final Set<Class<?>> supportedTypes = new HashSet<>(
-                Arrays.asList(
-                        String.class, Long.class, Integer.class, Short.class,
-                        Double.class, Float.class, Boolean.class
-                )
+            Arrays.asList(
+                String.class, Long.class, Integer.class, Short.class,
+                Double.class, Float.class, Boolean.class
+            )
         );
 
         return supportedTypes.contains(fieldValue.getClass());
@@ -114,28 +116,28 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
     @Override
     public ConfigDef config() {
         return new ConfigDef()
-                .define("field.name",
-                        ConfigDef.Type.STRING,
-                        null,
-                        ConfigDef.Importance.HIGH,
-                        "The field name to filter by." +
-                                "Schema-based records (Avro), schemaless (e.g. JSON), and raw values are supported." +
-                                "If empty, the whole key/value record will be filtered.")
-                .define("field.value",
-                        ConfigDef.Type.STRING,
-                        null,
-                        ConfigDef.Importance.HIGH,
-                        "Expected value to match. Either define this, or a regex pattern")
-                .define("field.value.pattern",
-                        ConfigDef.Type.STRING,
-                        null,
-                        ConfigDef.Importance.HIGH,
-                        "The pattern to match. Either define this, or an expected value")
-                .define("field.value.matches",
-                        ConfigDef.Type.BOOLEAN,
-                        true,
-                        ConfigDef.Importance.MEDIUM,
-                        "The filter mode, 'true' for matching or 'false' for non-matching");
+            .define("field.name",
+                ConfigDef.Type.STRING,
+                null,
+                ConfigDef.Importance.HIGH,
+                "The field name to filter by."
+                    + "Schema-based records (Avro), schemaless (e.g. JSON), and raw values are supported."
+                    + "If empty, the whole key/value record will be filtered.")
+            .define("field.value",
+                ConfigDef.Type.STRING,
+                null,
+                ConfigDef.Importance.HIGH,
+                "Expected value to match. Either define this, or a regex pattern")
+            .define("field.value.pattern",
+                ConfigDef.Type.STRING,
+                null,
+                ConfigDef.Importance.HIGH,
+                "The pattern to match. Either define this, or an expected value")
+            .define("field.value.matches",
+                ConfigDef.Type.BOOLEAN,
+                true,
+                ConfigDef.Importance.MEDIUM,
+                "The filter mode, 'true' for matching or 'false' for non-matching");
     }
 
     @Override
@@ -151,30 +153,30 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
         final boolean expectedValuePresent = fieldExpectedValue.map(s -> !s.isEmpty()).orElse(false);
         final boolean regexPatternPresent = fieldValuePattern.map(s -> !s.isEmpty()).orElse(false);
         if ((expectedValuePresent && regexPatternPresent)
-                || (!expectedValuePresent && !regexPatternPresent)) {
+            || (!expectedValuePresent && !regexPatternPresent)) {
             throw new ConfigException(
-                    "Either field.value or field.value.pattern have to be set to apply filter transform");
+                "Either field.value or field.value.pattern have to be set to apply filter transform");
         }
         final Predicate<Optional<String>> matchCondition = fieldValue -> fieldValue
-                .filter(value -> expectedValuePresent
-                        ? fieldExpectedValue.get().equals(value)
-                        : value.matches(fieldValuePattern.get()))
-                .isPresent();
+            .filter(value -> expectedValuePresent
+                ? fieldExpectedValue.get().equals(value)
+                : value.matches(fieldValuePattern.get()))
+            .isPresent();
         this.filterCondition = config.getBoolean("field.value.matches")
-                ? matchCondition
-                : (result -> !matchCondition.test(result));
+            ? matchCondition
+            : (result -> !matchCondition.test(result));
     }
 
 
     public static final class Key<R extends ConnectRecord<R>> extends FilterByFieldValue<R> {
 
         @Override
-        protected Schema operatingSchema(R record) {
+        protected Schema operatingSchema(final R record) {
             return record.keySchema();
         }
 
         @Override
-        protected Object operatingValue(R record) {
+        protected Object operatingValue(final R record) {
             return record.key();
         }
     }
@@ -182,12 +184,12 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
     public static final class Value<R extends ConnectRecord<R>> extends FilterByFieldValue<R> {
 
         @Override
-        protected Schema operatingSchema(R record) {
+        protected Schema operatingSchema(final R record) {
             return record.valueSchema();
         }
 
         @Override
-        protected Object operatingValue(R record) {
+        protected Object operatingValue(final R record) {
             return record.value();
         }
     }

@@ -28,7 +28,8 @@ import org.apache.kafka.connect.source.SourceRecord;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class FilterByFieldValueTest {
 
@@ -37,44 +38,45 @@ class FilterByFieldValueTest {
     void shouldFilterOutValueRecordsEqualsToReadEvents() {
         final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Value<>();
         filter.configure(Map.of(
-                "field.name", "op",
-                "field.value", "r",
-                "field.value.matches", "false"
+            "field.name", "op",
+            "field.value", "r",
+            "field.value.matches", "false"
         ));
 
-        assertNull(filter.apply(
-                        prepareStructRecord(
-                                struct -> {
-                                },
-                                struct -> struct.put("op", "r")
-                        )),
-                "Record with op 'r' should be filtered out");
-        SourceRecord record = prepareStructRecord(
-                struct -> {
-                },
-                struct -> struct.put("op", "u")
+        assertNull(
+            filter.apply(
+                prepareStructRecord(
+                    struct -> {
+                    },
+                    struct -> struct.put("op", "r")
+                )),
+            "Record with op 'r' should be filtered out");
+        final SourceRecord record = prepareStructRecord(
+            struct -> {
+            },
+            struct -> struct.put("op", "u")
         );
         assertEquals(record, filter.apply(record),
-                "Record with op not 'r' should be not filtered out");
+            "Record with op not 'r' should be not filtered out");
     }
 
     @Test
     void shouldFilterOutKeyRecordsEqualsToId() {
         final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Key<>();
         filter.configure(Map.of(
-                "field.name", "id",
-                "field.value", "123",
-                "field.value.matches", "false"
+            "field.name", "id",
+            "field.value", "123",
+            "field.value.matches", "false"
         ));
 
         assertNull(filter.apply(prepareStructRecord(
-                struct -> struct.put("id", "123"),
-                struct -> {
-                })), "Record with id '123' should be filtered out");
-        SourceRecord record = prepareStructRecord(
-                struct -> struct.put("id", "111"),
-                struct -> {
-                });
+            struct -> struct.put("id", "123"),
+            struct -> {
+            })), "Record with id '123' should be filtered out");
+        final SourceRecord record = prepareStructRecord(
+            struct -> struct.put("id", "111"),
+            struct -> {
+            });
         assertEquals(record, filter.apply(record), "Record with id not '123' should not be filtered out");
     }
 
@@ -82,21 +84,23 @@ class FilterByFieldValueTest {
     void shouldFilterOutValueRecordsNotEqualsReadEvents() {
         final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Value<>();
         filter.configure(Map.of(
-                "field.name", "op",
-                "field.value", "r",
-                "field.value.matches", "true"
+            "field.name", "op",
+            "field.value", "r",
+            "field.value.matches", "true"
         ));
 
-        assertNull(filter.apply(prepareStructRecord(
-                        struct -> {
-                        },
-                        struct -> struct.put("op", "u")
+        assertNull(
+            filter.apply(
+                prepareStructRecord(
+                    struct -> {
+                    },
+                    struct -> struct.put("op", "u")
                 )),
-                "Record with op not equal to 'r' should be filtered out");
-        SourceRecord record = prepareStructRecord(
-                struct -> {
-                },
-                struct -> struct.put("op", "r")
+            "Record with op not equal to 'r' should be filtered out");
+        final SourceRecord record = prepareStructRecord(
+            struct -> {
+            },
+            struct -> struct.put("op", "r")
         );
         assertEquals(record, filter.apply(record), "Record with op equal to 'r' should not be filtered out");
     }
@@ -105,20 +109,23 @@ class FilterByFieldValueTest {
     void shouldFilterOutKeyRecordsNotEqualsToId() {
         final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Key<>();
         filter.configure(Map.of(
-                "field.name", "id",
-                "field.value", "123",
-                "field.value.matches", "true"
+            "field.name", "id",
+            "field.value", "123",
+            "field.value.matches", "true"
         ));
 
-        assertNull(filter.apply(prepareStructRecord(
-                struct -> struct.put("id", "111"),
-                struct -> {
-                }
-        )), "Record with id not equal to '123' should be filtered out");
-        SourceRecord record = prepareStructRecord(
-                struct -> struct.put("id", "123"),
-                struct -> {
-                }
+        assertNull(
+            filter.apply(
+                prepareStructRecord(
+                    struct -> struct.put("id", "111"),
+                    struct -> {
+                    }
+                )),
+            "Record with id not equal to '123' should be filtered out");
+        final SourceRecord record = prepareStructRecord(
+            struct -> struct.put("id", "123"),
+            struct -> {
+            }
         );
         assertEquals(record, filter.apply(record), "Record with id equal to '123' should not be filtered out");
     }
@@ -132,8 +139,9 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> "42", () -> Map.of("language", "Javascript"))), "The record should be filtered out");
-        SourceRecord record = prepareRecord(() -> "42", () -> Map.of("language", "Rust"));
+        assertNull(filterByFieldValue.apply(prepareRecord(() -> "42", () -> Map.of("language", "Javascript"))),
+            "The record should be filtered out");
+        final SourceRecord record = prepareRecord(() -> "42", () -> Map.of("language", "Rust"));
         assertEquals(record, filterByFieldValue.apply(record), "The record should not be filtered out");
     }
 
@@ -146,8 +154,9 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "42")), "The record should be filtered out");
-        SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> "42");
+        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "42")),
+            "The record should be filtered out");
+        final SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> "42");
         assertEquals(record, filterByFieldValue.apply(record), "The record should not be filtered out");
     }
 
@@ -159,8 +168,9 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> "42", () -> Map.of("language", "Javascript"))), "The record should be filtered out");
-        SourceRecord record = prepareRecord(() -> "43", () -> Map.of("language", "Rust"));
+        assertNull(filterByFieldValue.apply(prepareRecord(() -> "42", () -> Map.of("language", "Javascript"))),
+            "The record should be filtered out");
+        final SourceRecord record = prepareRecord(() -> "43", () -> Map.of("language", "Rust"));
         assertEquals(record, filterByFieldValue.apply(record), "The record should be filtered out");
     }
 
@@ -172,54 +182,61 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "42")), "The record should be filtered out");
-        SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> "43");
+        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "42")),
+            "The record should be filtered out");
+        final SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> "43");
         assertEquals(record, filterByFieldValue.apply(record), "The record should be filtered out");
     }
 
-    private SourceRecord prepareRecord(Supplier<Object> keySupplier, Supplier<Object> valueSupplier) {
-         return new SourceRecord(null, null, "some_topic",
-                null, keySupplier.get(),
-                null, valueSupplier.get());
+    private SourceRecord prepareRecord(
+        final Supplier<Object> keySupplier,
+        final Supplier<Object> valueSupplier
+    ) {
+        return new SourceRecord(null, null, "some_topic",
+            null, keySupplier.get(),
+            null, valueSupplier.get());
     }
 
-    private SourceRecord prepareStructRecord(Consumer<Struct> keyChanges, Consumer<Struct> valueChanges) {
-        final Schema KEY_VALUE = SchemaBuilder.struct()
-                .field("id", Schema.STRING_SCHEMA)
-                .build();
-        final Schema VALUE_SCHEMA = SchemaBuilder.struct()
-                .field("before", Schema.OPTIONAL_STRING_SCHEMA)
-                .field("after", SchemaBuilder.struct()
-                        .field("pk", Schema.STRING_SCHEMA)
-                        .field("value", Schema.STRING_SCHEMA)
-                        .build())
-                .field("source", SchemaBuilder.struct().optional())
-                .field("op", Schema.STRING_SCHEMA)
-                .field("ts_ms", Schema.STRING_SCHEMA)
-                .field("transaction", Schema.OPTIONAL_STRING_SCHEMA)
-                .build();
+    private SourceRecord prepareStructRecord(
+        final Consumer<Struct> keyChanges,
+        final Consumer<Struct> valueChanges
+    ) {
+        final Schema keySchema = SchemaBuilder.struct()
+            .field("id", Schema.STRING_SCHEMA)
+            .build();
+        final Schema valueSchema = SchemaBuilder.struct()
+            .field("before", Schema.OPTIONAL_STRING_SCHEMA)
+            .field("after", SchemaBuilder.struct()
+                .field("pk", Schema.STRING_SCHEMA)
+                .field("value", Schema.STRING_SCHEMA)
+                .build())
+            .field("source", SchemaBuilder.struct().optional())
+            .field("op", Schema.STRING_SCHEMA)
+            .field("ts_ms", Schema.STRING_SCHEMA)
+            .field("transaction", Schema.OPTIONAL_STRING_SCHEMA)
+            .build();
 
-        final Struct key = new Struct(KEY_VALUE)
-                .put("id", "123");
+        final Struct key = new Struct(keySchema)
+            .put("id", "123");
         keyChanges.accept(key);
 
-        final Struct after = new Struct(VALUE_SCHEMA.field("after").schema())
-                .put("pk", "1")
-                .put("value", "New data");
+        final Struct after = new Struct(valueSchema.field("after").schema())
+            .put("pk", "1")
+            .put("value", "New data");
 
-        final Struct value = new Struct(VALUE_SCHEMA)
-                .put("before", null)
-                .put("after", after)
-                .put("source", null)
-                .put("op", "u")
-                .put("ts_ms", "1620393591654")
-                .put("transaction", null);
+        final Struct value = new Struct(valueSchema)
+            .put("before", null)
+            .put("after", after)
+            .put("source", null)
+            .put("op", "u")
+            .put("ts_ms", "1620393591654")
+            .put("transaction", null);
         valueChanges.accept(value);
 
         return new SourceRecord(
-                null, null, "some_topic",
-                KEY_VALUE, key,
-                VALUE_SCHEMA, value
+            null, null, "some_topic",
+            keySchema, key,
+            valueSchema, value
         );
     }
 }
