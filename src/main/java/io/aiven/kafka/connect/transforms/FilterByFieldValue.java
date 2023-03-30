@@ -19,8 +19,8 @@ package io.aiven.kafka.connect.transforms;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
-
 import java.util.regex.Pattern;
+
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
@@ -94,6 +94,7 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
             ? matchCondition
             : (result -> !matchCondition.test(result));
     }
+
     private Predicate<SchemaAndValue> filterCondition;
 
     protected abstract Schema operatingSchema(R record);
