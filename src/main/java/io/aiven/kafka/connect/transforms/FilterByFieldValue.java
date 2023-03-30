@@ -16,11 +16,8 @@
 
 package io.aiven.kafka.connect.transforms;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Predicate;
 
 import org.apache.kafka.common.config.AbstractConfig;
@@ -30,16 +27,15 @@ import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Values;
 import org.apache.kafka.connect.transforms.Transformation;
-
-import static org.apache.kafka.connect.data.Schema.Type.STRING;
 
 public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements Transformation<R> {
 
     private String fieldName;
     private Optional<String> fieldExpectedValue;
     private Optional<String> fieldValuePattern;
-    private Predicate<Optional<String>> filterCondition;
+    private Predicate<String> filterCondition;
 
     @Override
     public R apply(final R record) {
@@ -61,7 +57,7 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
 
     private R applyWithSchema(final R record) {
         final Struct struct = (Struct) operatingValue(record);
-        final Optional<String> fieldValue = getStructFieldValue(struct, fieldName);
+        final String fieldValue = getStructFieldValue(struct, fieldName).orElse(null);
         return filterCondition.test(fieldValue) ? record : null;
     }
 
@@ -69,24 +65,17 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
         final Schema schema = struct.schema();
         final Field field = schema.field(fieldName);
         final Object fieldValue = struct.get(field);
-
-        Optional<String> text = Optional.empty();
-        if (STRING.equals(field.schema().type())) {
-            text = Optional.of((String) fieldValue);
-        } else if (schema.type().isPrimitive()) {
-            text = Optional.of(fieldValue.toString());
-        }
-        return text;
+        return Optional.ofNullable(Values.convertToString(field.schema(), fieldValue));
     }
 
     @SuppressWarnings("unchecked")
     private R applySchemaless(final R record) {
         if (fieldName == null || fieldName.isEmpty()) {
-            final Optional<String> value = getSchemalessFieldValue(operatingValue(record));
+            final String value = getSchemalessFieldValue(operatingValue(record)).orElse(null);
             return filterCondition.test(value) ? record : null;
         } else {
             final Map<String, Object> map = (Map<String, Object>) operatingValue(record);
-            final Optional<String> fieldValue = getSchemalessFieldValue(map.get(fieldName));
+            final String fieldValue = getSchemalessFieldValue(map.get(fieldName)).orElse(null);
             return filterCondition.test(fieldValue) ? record : null;
         }
     }
@@ -95,49 +84,34 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
         if (fieldValue == null) {
             return Optional.empty();
         }
-        Optional<String> text = Optional.empty();
-        if (isSupportedType(fieldValue)) {
-            text = Optional.of(fieldValue.toString());
-        }
-        return text;
-    }
-
-    private boolean isSupportedType(final Object fieldValue) {
-        final Set<Class<?>> supportedTypes = new HashSet<>(
-            Arrays.asList(
-                String.class, Long.class, Integer.class, Short.class,
-                Double.class, Float.class, Boolean.class
-            )
-        );
-
-        return supportedTypes.contains(fieldValue.getClass());
+        return Optional.ofNullable(Values.convertToString(null, fieldValue));
     }
 
     @Override
     public ConfigDef config() {
         return new ConfigDef()
-            .define("field.name",
-                ConfigDef.Type.STRING,
-                null,
-                ConfigDef.Importance.HIGH,
-                "The field name to filter by."
-                    + "Schema-based records (Avro), schemaless (e.g. JSON), and raw values are supported."
-                    + "If empty, the whole key/value record will be filtered.")
-            .define("field.value",
-                ConfigDef.Type.STRING,
-                null,
-                ConfigDef.Importance.HIGH,
-                "Expected value to match. Either define this, or a regex pattern")
-            .define("field.value.pattern",
-                ConfigDef.Type.STRING,
-                null,
-                ConfigDef.Importance.HIGH,
-                "The pattern to match. Either define this, or an expected value")
-            .define("field.value.matches",
-                ConfigDef.Type.BOOLEAN,
-                true,
-                ConfigDef.Importance.MEDIUM,
-                "The filter mode, 'true' for matching or 'false' for non-matching");
+                .define("field.name",
+                        ConfigDef.Type.STRING,
+                        null,
+                        ConfigDef.Importance.HIGH,
+                        "The field name to filter by."
+                                + "Schema-based records (Avro), schemaless (e.g. JSON), and raw values are supported."
+                                + "If empty, the whole key/value record will be filtered.")
+                .define("field.value",
+                        ConfigDef.Type.STRING,
+                        null,
+                        ConfigDef.Importance.HIGH,
+                        "Expected value to match. Either define this, or a regex pattern")
+                .define("field.value.pattern",
+                        ConfigDef.Type.STRING,
+                        null,
+                        ConfigDef.Importance.HIGH,
+                        "The pattern to match. Either define this, or an expected value")
+                .define("field.value.matches",
+                        ConfigDef.Type.BOOLEAN,
+                        true,
+                        ConfigDef.Importance.MEDIUM,
+                        "The filter mode, 'true' for matching or 'false' for non-matching");
     }
 
     @Override
@@ -152,16 +126,20 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
         this.fieldValuePattern = Optional.ofNullable(config.getString("field.value.pattern"));
         final boolean expectedValuePresent = fieldExpectedValue.map(s -> !s.isEmpty()).orElse(false);
         final boolean regexPatternPresent = fieldValuePattern.map(s -> !s.isEmpty()).orElse(false);
-        if ((expectedValuePresent && regexPatternPresent)
-            || (!expectedValuePresent && !regexPatternPresent)) {
+        if (expectedValuePresent == regexPatternPresent) {
             throw new ConfigException(
-                "Either field.value or field.value.pattern have to be set to apply filter transform");
+                    "Either field.value or field.value.pattern have to be set to apply filter transform");
         }
-        final Predicate<Optional<String>> matchCondition = fieldValue -> fieldValue
-            .filter(value -> expectedValuePresent
-                ? fieldExpectedValue.get().equals(value)
-                : value.matches(fieldValuePattern.get()))
-            .isPresent();
+        final Predicate<String> matchCondition;
+
+        if (expectedValuePresent) {
+            final String expectedValue = fieldExpectedValue.get();
+            matchCondition = fieldValue -> fieldValue != null && fieldValue.equals(expectedValue);
+        } else {
+            final String pattern = fieldValuePattern.get();
+            matchCondition = fieldValue -> fieldValue != null && fieldValue.matches(pattern);
+        }
+
         this.filterCondition = config.getBoolean("field.value.matches")
             ? matchCondition
             : (result -> !matchCondition.test(result));
