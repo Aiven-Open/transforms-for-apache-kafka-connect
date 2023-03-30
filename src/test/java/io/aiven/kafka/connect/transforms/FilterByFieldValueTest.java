@@ -65,19 +65,19 @@ class FilterByFieldValueTest {
         final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Key<>();
         filter.configure(Map.of(
             "field.name", "id",
-            "field.value", "123",
+            "field.value", "A123",
             "field.value.matches", "false"
         ));
 
         assertNull(filter.apply(prepareStructRecord(
-            struct -> struct.put("id", "123"),
+            struct -> struct.put("id", "A123"),
             struct -> {
-            })), "Record with id '123' should be filtered out");
+            })), "Record with id 'A132' should be filtered out");
         final SourceRecord record = prepareStructRecord(
-            struct -> struct.put("id", "111"),
+            struct -> struct.put("id", "A111"),
             struct -> {
             });
-        assertEquals(record, filter.apply(record), "Record with id not '123' should not be filtered out");
+        assertEquals(record, filter.apply(record), "Record with id not 'A132' should not be filtered out");
     }
 
     @Test
@@ -110,7 +110,7 @@ class FilterByFieldValueTest {
         final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Key<>();
         filter.configure(Map.of(
             "field.name", "id",
-            "field.value", "123",
+            "field.value", "A123",
             "field.value.matches", "true"
         ));
 
@@ -121,13 +121,13 @@ class FilterByFieldValueTest {
                     struct -> {
                     }
                 )),
-            "Record with id not equal to '123' should be filtered out");
+            "Record with id not equal to 'A132' should be filtered out");
         final SourceRecord record = prepareStructRecord(
-            struct -> struct.put("id", "123"),
+            struct -> struct.put("id", "A123"),
             struct -> {
             }
         );
-        assertEquals(record, filter.apply(record), "Record with id equal to '123' should not be filtered out");
+        assertEquals(record, filter.apply(record), "Record with id equal to 'A132' should not be filtered out");
     }
 
     @Test
@@ -139,9 +139,9 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> "42", () -> Map.of("language", "Javascript"))),
+        assertNull(filterByFieldValue.apply(prepareRecord(() -> "A42", () -> Map.of("language", "Javascript"))),
             "The record should be filtered out");
-        final SourceRecord record = prepareRecord(() -> "42", () -> Map.of("language", "Rust"));
+        final SourceRecord record = prepareRecord(() -> "A42", () -> Map.of("language", "Rust"));
         assertEquals(record, filterByFieldValue.apply(record), "The record should not be filtered out");
     }
 
@@ -154,9 +154,9 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "42")),
+        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "A42")),
             "The record should be filtered out");
-        final SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> "42");
+        final SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> "A42");
         assertEquals(record, filterByFieldValue.apply(record), "The record should not be filtered out");
     }
 
@@ -164,11 +164,11 @@ class FilterByFieldValueTest {
     void shouldFilterOutRawKeyRecords() {
         final FilterByFieldValue<SourceRecord> filterByFieldValue = new FilterByFieldValue.Key<>();
         final Map<String, String> configs = new HashMap<>();
-        configs.put("field.value", "42");
+        configs.put("field.value", "A42");
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> "42", () -> Map.of("language", "Javascript"))),
+        assertNull(filterByFieldValue.apply(prepareRecord(() -> "A42", () -> Map.of("language", "Javascript"))),
             "The record should be filtered out");
         final SourceRecord record = prepareRecord(() -> "43", () -> Map.of("language", "Rust"));
         assertEquals(record, filterByFieldValue.apply(record), "The record should be filtered out");
@@ -178,13 +178,27 @@ class FilterByFieldValueTest {
     void shouldFilterOutRawValueRecords() {
         final FilterByFieldValue<SourceRecord> filterByFieldValue = new FilterByFieldValue.Value<>();
         final Map<String, String> configs = new HashMap<>();
+        configs.put("field.value", "A42");
+        configs.put("field.value.matches", "false");
+        filterByFieldValue.configure(configs);
+
+        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "A42")),
+            "The record should be filtered out");
+        final SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> "43");
+        assertEquals(record, filterByFieldValue.apply(record), "The record should be filtered out");
+    }
+
+    @Test
+    void shouldFilterOutRawNumericValueRecords() {
+        final FilterByFieldValue<SourceRecord> filterByFieldValue = new FilterByFieldValue.Value<>();
+        final Map<String, String> configs = new HashMap<>();
         configs.put("field.value", "42");
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "42")),
+        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> (byte) 42)),
             "The record should be filtered out");
-        final SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> "43");
+        final SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> (byte) 43);
         assertEquals(record, filterByFieldValue.apply(record), "The record should be filtered out");
     }
 
@@ -217,7 +231,7 @@ class FilterByFieldValueTest {
             .build();
 
         final Struct key = new Struct(keySchema)
-            .put("id", "123");
+            .put("id", "A123");
         keyChanges.accept(key);
 
         final Struct after = new Struct(valueSchema.field("after").schema())
