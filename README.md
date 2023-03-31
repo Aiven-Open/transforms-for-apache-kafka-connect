@@ -123,7 +123,7 @@ Here is an example of this transformation configuration:
 ```
 transforms=ConcatFields
 transforms.ConcatFields.type=io.aiven.kafka.connect.transforms.ConcatFields$Value
-transforms.ConcatFields.field.names=["test","foo","bar","age"]
+transforms.ConcatFields.field.names=test,foo,bar,age
 transforms.ConcatFields.output.field.name="combined"
 transforms.ConcatFields.delimiter="-"
 transforms.ConcatFields.field.replace.missing="*"
