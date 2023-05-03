@@ -31,7 +31,7 @@ plugins {
     id 'idea'
 
     // https://ajoberstar.org/grgit/grgit-gradle.html
-    id 'org.ajoberstar.grgit' version '5.0.0'
+    id 'org.ajoberstar.grgit' version '5.2.0'
 }
 
 repositories {
