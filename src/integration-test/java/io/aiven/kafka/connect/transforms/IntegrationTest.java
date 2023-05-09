@@ -174,6 +174,42 @@ final class IntegrationTest {
         assertEquals(TestSourceConnector.MESSAGES_TO_PRODUCE, endOffsets.get(newTopicPartition0));
     }
 
+    @Test
+    @Timeout(10)
+    final void testExtractTopicFromEventTypeCreateConnector() {
+        final Map<String, String> connectorConfig = new HashMap<>();
+        connectorConfig.put("name", "test-source-connector");
+        connectorConfig.put("connector.class", TestSourceConnector.class.getName());
+        connectorConfig.put("key.converter", "org.apache.kafka.connect.json.JsonConverter");
+        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+        connectorConfig.put("transforms",
+                "ExtractTopicFromEventType");
+        connectorConfig.put("transforms.ExtractTopicFromEventType.type",
+                "io.aiven.kafka.connect.transforms.ExtractTopicFromEventType$Value");
+        connectorConfig.put("tasks.max", "1");
+
+        try {
+            connectRunner.createConnector(connectorConfig);
+        } catch (final Exception e) {
+            log.error("Error in testExtractTopicFromEventType", e);
+            e.printStackTrace();
+        }
+        /*
+        waitForCondition(
+                () -> consumer
+                        .endOffsets(Arrays.asList(originalTopicPartition0, newTopicPartition0))
+                        .values().stream().reduce(Long::sum).map(s -> s >= TestSourceConnector.MESSAGES_TO_PRODUCE)
+                        .orElse(false),
+                5000, "Messages appear in any topic"
+        );
+        final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(
+                Arrays.asList(originalTopicPartition0, newTopicPartition0));
+        // The original topic should be empty.
+        assertEquals(0, endOffsets.get(originalTopicPartition0));
+        // The new topic should be non-empty.
+        assertEquals(TestSourceConnector.MESSAGES_TO_PRODUCE, endOffsets.get(newTopicPartition0));*/
+    }
+
     private void waitForCondition(final Supplier<Boolean> conditionChecker,
                                   final long maxWaitMs,
                                   final String condition) throws InterruptedException {

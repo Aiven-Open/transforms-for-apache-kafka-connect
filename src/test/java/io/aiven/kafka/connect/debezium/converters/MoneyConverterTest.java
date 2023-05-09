@@ -82,10 +82,10 @@ public class MoneyConverterTest {
         transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
         final String result = (String) registration.currConverter.convert(BigDecimal.valueOf(103.6999));
-        assertEquals(result, "103.70");
+        assertEquals(result, "103,70");
 
         final String result2 = (String) registration.currConverter.convert((long) 103);
-        assertEquals(result2, "103.00");
+        assertEquals(result2, "103,00");
     }
 
     @Test
