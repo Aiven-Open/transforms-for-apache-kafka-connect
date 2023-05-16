@@ -23,20 +23,30 @@ import org.apache.kafka.connect.sink.SinkRecord;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ExtractTopicFromEventTypeTest {
+public class ExtractTopicFromValueSchemaTest {
     @Test
-    void eventSchemaTypeToTopicTest() {
+    void valueSchemaNameToTopicTest() {
         final Schema keySchema = SchemaBuilder.struct().keySchema();
-        final Schema valueSchema = SchemaBuilder.struct().name("PlayerEmailChannelRequested").schema();
-        final SinkRecord originalRecord  = record(keySchema, "", valueSchema, "{}");
-        final ExtractTopicFromEventType extractTopicFromEventType = new ExtractTopicFromEventType(){};
-        final SinkRecord  transformedRecord = (SinkRecord) extractTopicFromEventType.apply(originalRecord);
-        assertEquals("PlayerEmailChannelRequested", transformedRecord.topic());
+        final Schema valueSchema = SchemaBuilder.struct().name("com.acme.schema.SchemaNameToTopic").schema();
+        final SinkRecord originalRecord  = record(keySchema, "key", valueSchema, "{}");
+        final SinkRecord transformedRecord = transformation().apply(originalRecord);
+        assertEquals("com.acme.schema.SchemaNameToTopic", transformedRecord.topic());
 
     }
 
+    private ExtractTopicFromValueSchema<SinkRecord> transformation() {
+        final ExtractTopicFromValueSchema<SinkRecord> transform = createTransformationObject();
+        return transform;
+    }
+
+    protected ExtractTopicFromValueSchema<SinkRecord> createTransformationObject() {
+        return new ExtractTopicFromValueSchema.Name<>();
+    }
     protected SinkRecord record(final Schema keySchema,
                                 final Object key,
                                 final Schema valueSchema,

@@ -18,30 +18,27 @@ package io.aiven.kafka.connect.transforms;
 
 import java.util.Map;
 import java.util.Optional;
-
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.transforms.Transformation;
-
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
 
-public abstract class ExtractTopicFromEventType<R extends ConnectRecord<R>> implements Transformation<R> {
+public abstract class ExtractTopicFromValueSchema<R extends ConnectRecord<R>> implements Transformation<R> {
 
-    private static final Logger log = LoggerFactory.getLogger(ExtractTopicFromEventType.class);
+    private static final Logger log = LoggerFactory.getLogger(ExtractTopicFromValueSchema.class);
 
     @Override
     public ConfigDef config() {
-        log.info("ConfigDef ExtractTopicFromEventType");
-        return new ConfigDef();
+        return new ConfigDef(); // no particular configs needed
     }
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        log.info("Configure ExtractTopicFromEventType");
+        log.info("ExtractTopicFromValueSchemaName Configure {}", configs);
     }
 
     @Override
@@ -49,8 +46,13 @@ public abstract class ExtractTopicFromEventType<R extends ConnectRecord<R>> impl
         log.info("Try to change the topic to value schema name!");
         log.info("Record {} ", record);
         log.info("Record value schema : {}", record.valueSchema());
+        log.info("Record value schema name : {}", record.valueSchema().name());
+        log.info("Record value schema name : {}", record);
+        log.info("Record class {}", record.value().getClass().getCanonicalName());
+
         final String newTopic = Optional.ofNullable(record.valueSchema().name()).orElse(record.topic());
         log.info("newTopic {} ", newTopic);
+
         final R connectRecord = record.newRecord(
                 newTopic,
                 record.kafkaPartition(),
@@ -66,14 +68,14 @@ public abstract class ExtractTopicFromEventType<R extends ConnectRecord<R>> impl
 
     @Override
     public void close() {
-        log.info("ExtractTopicFromEventType Close");
+        log.info("ExtractTopicFromValueSchemaName Close");
     }
 
-    public static class Value<R extends ConnectRecord<R>> extends ExtractTopicFromEventType<R> {
+    public static class Name<R extends ConnectRecord<R>> extends ExtractTopicFromValueSchema<R> {
 
         @Override
         public void close() {
-            log.info("ExtractTopicFromEventTyp$Value Close");
+            log.info("ExtractTopicFromValueSchemaName Close");
         }
     }
 }
