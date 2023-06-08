@@ -30,17 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ExtractTopicFromValueSchemaTest {
     @Test
-    void nullConfigsValueSchemaNameToTopicTest() {
-
-        final Schema keySchema = SchemaBuilder.struct().keySchema();
-        final Schema valueSchema = SchemaBuilder.struct().name("com.acme.schema.SchemaNameToTopic").schema();
-        final SinkRecord originalRecord = record(keySchema, "key", valueSchema, "{}");
-        final SinkRecord transformedRecord = transformation(null).apply(originalRecord);
-        assertEquals("com.acme.schema.SchemaNameToTopic", transformedRecord.topic());
-
-    }
-
-    @Test
     void emptyConfigsValueSchemaNameToTopicTest() {
 
         final Schema keySchema = SchemaBuilder.struct().keySchema();

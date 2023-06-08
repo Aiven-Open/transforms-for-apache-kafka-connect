@@ -34,9 +34,7 @@ public abstract class ExtractTopicFromValueSchema<R extends ConnectRecord<R>> im
     private static final Logger log = LoggerFactory.getLogger(ExtractTopicFromValueSchema.class);
 
     private ExtractTopicFromValueSchemaConfig config;
-    private  Optional<String> regex;
-
-    private Optional<Map<String, String>> schemaNameToTopicMap;
+    private Map<String, String> schemaNameToTopicMap;
     private Pattern pattern;
 
     @Override
@@ -48,10 +46,8 @@ public abstract class ExtractTopicFromValueSchema<R extends ConnectRecord<R>> im
     public void configure(final Map<String, ?> configs) {
         this.config = new ExtractTopicFromValueSchemaConfig(configs);
         schemaNameToTopicMap = config.schemaNameToTopicMap();
-        regex = config.regEx();
-        if (regex.isPresent()) {
-            pattern = Pattern.compile(regex.get());
-        }
+        final Optional<String> regex = config.regEx();
+        regex.ifPresent(s -> pattern = Pattern.compile(s));
     }
 
     @Override
@@ -60,17 +56,13 @@ public abstract class ExtractTopicFromValueSchema<R extends ConnectRecord<R>> im
         if (null == record.valueSchema() || null == record.valueSchema().name()) {
             throw new DataException(" value schema name can't be null: " + record);
         }
-        // If no extra configs use record.valueSchema().name() -> newTopic
-        if (null == config) {
-            return createConnectRecord(record, Optional.ofNullable(record.valueSchema().name()).orElse(record.topic()));
-        }
         // First check schema value name -> desired topic name mapping and use that if it is set.
-        if (schemaNameToTopicMap.isPresent() && schemaNameToTopicMap.get().containsKey(record.valueSchema().name())) {
-            return createConnectRecord(record, schemaNameToTopicMap.get().get(record.valueSchema().name()));
+        if (schemaNameToTopicMap.containsKey(record.valueSchema().name())) {
+            return createConnectRecord(record, schemaNameToTopicMap.get(record.valueSchema().name()));
         }
         // Secondly check if regex parsing from schema value name is set and use that.
         final Optional<String> regex = config.regEx();
-        if (regex.isPresent()) {
+        if (pattern != null) {
             final Matcher matcher = pattern.matcher(record.valueSchema().name());
             if (matcher.find() && matcher.groupCount() == 1) {
                 return createConnectRecord(record, matcher.group(1));
