@@ -33,7 +33,6 @@ public abstract class ExtractTopicFromValueSchema<R extends ConnectRecord<R>> im
 
     private static final Logger log = LoggerFactory.getLogger(ExtractTopicFromValueSchema.class);
 
-    private ExtractTopicFromValueSchemaConfig config;
     private Map<String, String> schemaNameToTopicMap;
     private Pattern pattern;
 
@@ -44,7 +43,7 @@ public abstract class ExtractTopicFromValueSchema<R extends ConnectRecord<R>> im
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        this.config = new ExtractTopicFromValueSchemaConfig(configs);
+        final ExtractTopicFromValueSchemaConfig config = new ExtractTopicFromValueSchemaConfig(configs);
         schemaNameToTopicMap = config.schemaNameToTopicMap();
         final Optional<String> regex = config.regEx();
         regex.ifPresent(s -> pattern = Pattern.compile(s));
@@ -61,7 +60,6 @@ public abstract class ExtractTopicFromValueSchema<R extends ConnectRecord<R>> im
             return createConnectRecord(record, schemaNameToTopicMap.get(record.valueSchema().name()));
         }
         // Secondly check if regex parsing from schema value name is set and use that.
-        final Optional<String> regex = config.regEx();
         if (pattern != null) {
             final Matcher matcher = pattern.matcher(record.valueSchema().name());
             if (matcher.find() && matcher.groupCount() == 1) {

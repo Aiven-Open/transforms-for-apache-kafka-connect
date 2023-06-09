@@ -90,15 +90,9 @@ public class ExtractTopicFromValueSchemaTest {
     }
 
     private ExtractTopicFromValueSchema<SinkRecord> transformation(final Map<String, ?> configs) {
-        final ExtractTopicFromValueSchema<SinkRecord> transform = createTransformationObject();
-        if (configs != null) {
-            transform.configure(configs);
-        }
+        final ExtractTopicFromValueSchema<SinkRecord> transform = new ExtractTopicFromValueSchema.Name<>();
+        transform.configure(configs);
         return transform;
-    }
-
-    protected ExtractTopicFromValueSchema<SinkRecord> createTransformationObject() {
-        return new ExtractTopicFromValueSchema.Name<>();
     }
 
     protected SinkRecord record(final Schema keySchema,

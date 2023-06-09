@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.transforms;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -61,19 +60,13 @@ public class ExtractTopicFromValueSchemaConfig extends AbstractConfig {
         if (null == schemaNameToTopicValue) {
             return Collections.emptyMap();
         }
-        final HashMap<String, String> schemaNameToTopicMap =
-                (HashMap<String, String>) Arrays.asList(schemaNameToTopicValue.split(","))
-                    .stream().map(entry -> entry.split(":"))
-                    .collect(Collectors.toMap(key -> key[0], value -> value[1]));
-        if (schemaNameToTopicMap.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return schemaNameToTopicMap;
+        return Arrays.stream(schemaNameToTopicValue.split(",")).map(entry -> entry.split(":"))
+            .collect(Collectors.toMap(key -> key[0], value -> value[1]));
     }
 
     Optional<String> regEx() {
         final String rawFieldName = getString(REGEX_SCHEMA_NAME_TO_TOPIC);
-        if (null == rawFieldName || "".equals(rawFieldName)) {
+        if (null == rawFieldName || rawFieldName.isEmpty()) {
             return Optional.empty();
         }
         return Optional.of(rawFieldName);
