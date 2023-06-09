@@ -185,9 +185,9 @@ final class IntegrationTest {
         connectorConfig.put("value.converter.value.subject.name.strategy",
                 "io.confluent.kafka.serializers.subject.RecordNameStrategy");
         connectorConfig.put("transforms",
-                "ExtractTopicFromValueSchema");
-        connectorConfig.put("transforms.ExtractTopicFromValueSchema.type",
-                "io.aiven.kafka.connect.transforms.ExtractTopicFromValueSchema$Name");
+                "ExtractTopicFromSchemaName");
+        connectorConfig.put("transforms.ExtractTopicFromSchemaName.type",
+                "io.aiven.kafka.connect.transforms.ExtractTopicFromSchemaName$Value");
         connectorConfig.put("tasks.max", "1");
         connectRunner.createConnector(connectorConfig);
         checkMessageTopics(originalTopicValueFromSchema, newTopicValueFromSchema);

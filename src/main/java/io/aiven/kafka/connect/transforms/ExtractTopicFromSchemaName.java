@@ -29,21 +29,21 @@ import org.apache.kafka.connect.transforms.Transformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class ExtractTopicFromValueSchema<R extends ConnectRecord<R>> implements Transformation<R> {
+public abstract class ExtractTopicFromSchemaName<R extends ConnectRecord<R>> implements Transformation<R> {
 
-    private static final Logger log = LoggerFactory.getLogger(ExtractTopicFromValueSchema.class);
+    private static final Logger log = LoggerFactory.getLogger(ExtractTopicFromSchemaName.class);
 
     private Map<String, String> schemaNameToTopicMap;
     private Pattern pattern;
 
     @Override
     public ConfigDef config() {
-        return ExtractTopicFromValueSchemaConfig.config();
+        return ExtractTopicFromSchemaNameConfig.config();
     }
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        final ExtractTopicFromValueSchemaConfig config = new ExtractTopicFromValueSchemaConfig(configs);
+        final ExtractTopicFromSchemaNameConfig config = new ExtractTopicFromSchemaNameConfig(configs);
         schemaNameToTopicMap = config.schemaNameToTopicMap();
         final Optional<String> regex = config.regEx();
         regex.ifPresent(s -> pattern = Pattern.compile(s));
@@ -88,8 +88,7 @@ public abstract class ExtractTopicFromValueSchema<R extends ConnectRecord<R>> im
     public void close() {
     }
 
-    public static class Name<R extends ConnectRecord<R>> extends ExtractTopicFromValueSchema<R> {
-
+    public static class Value<R extends ConnectRecord<R>> extends ExtractTopicFromSchemaName<R> {
         @Override
         public void close() {
         }

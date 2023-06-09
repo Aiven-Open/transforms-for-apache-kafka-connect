@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class ExtractTopicFromValueSchemaTest {
+public class ExtractTopicFromSchemaNameTest {
     @Test
     void emptyConfigsValueSchemaNameToTopicTest() {
 
@@ -43,7 +43,7 @@ public class ExtractTopicFromValueSchemaTest {
     @Test
     void configMapValueSchemaNameToTopicTest() {
         final Map<String, String> configs = new HashMap<>();
-        configs.put(ExtractTopicFromValueSchemaConfig.SCHEMA_NAME_TO_TOPIC,
+        configs.put(ExtractTopicFromSchemaNameConfig.SCHEMA_NAME_TO_TOPIC_MAP,
                 "com.acme.schema.SchemaNameToTopic1:TheNameToReplace1,"
                         + "com.acme.schema.SchemaNameToTopic2:TheNameToReplace2,"
                         + "com.acme.schema.SchemaNameToTopic3:TheNameToReplace3"
@@ -65,7 +65,7 @@ public class ExtractTopicFromValueSchemaTest {
     void regexConfigValueAfterLastDotToTopicTest() {
         final Map<String, String> configs = new HashMap<>();
         // pass regegx that will parse the class name after last dot
-        configs.put(ExtractTopicFromValueSchemaConfig.REGEX_SCHEMA_NAME_TO_TOPIC,
+        configs.put(ExtractTopicFromSchemaNameConfig.REGEX_SCHEMA_NAME_TO_TOPIC,
                 "(?:[.]|^)([^.]*)$");
         final Schema keySchema = SchemaBuilder.struct().keySchema();
         final Schema valueSchema = SchemaBuilder.struct().name("com.acme.schema.SchemaNameToTopic").schema();
@@ -79,7 +79,7 @@ public class ExtractTopicFromValueSchemaTest {
     void regexNoMatchToTopicTest() {
         final Map<String, String> configs = new HashMap<>();
         // pass regegx that will parse the class name after last dot
-        configs.put(ExtractTopicFromValueSchemaConfig.REGEX_SCHEMA_NAME_TO_TOPIC,
+        configs.put(ExtractTopicFromSchemaNameConfig.REGEX_SCHEMA_NAME_TO_TOPIC,
                 "/[^;]*/");
         final Schema keySchema = SchemaBuilder.struct().keySchema();
         final Schema valueSchema = SchemaBuilder.struct().name("com.acme.schema.SchemaNameToTopic").schema();
@@ -89,8 +89,8 @@ public class ExtractTopicFromValueSchemaTest {
 
     }
 
-    private ExtractTopicFromValueSchema<SinkRecord> transformation(final Map<String, ?> configs) {
-        final ExtractTopicFromValueSchema<SinkRecord> transform = new ExtractTopicFromValueSchema.Name<>();
+    private ExtractTopicFromSchemaName<SinkRecord> transformation(final Map<String, ?> configs) {
+        final ExtractTopicFromSchemaName<SinkRecord> transform = new ExtractTopicFromSchemaName.Value<>();
         transform.configure(configs);
         return transform;
     }

@@ -20,13 +20,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.config.ConfigException;
 
-public class ExtractTopicFromValueSchemaConfig extends AbstractConfig {
-    public static final String SCHEMA_NAME_TO_TOPIC = "schema.name.topic-map";
+public class ExtractTopicFromSchemaNameConfig extends AbstractConfig {
+    public static final String SCHEMA_NAME_TO_TOPIC_MAP = "schema.name.topic-map";
     public static final String REGEX_SCHEMA_NAME_TO_TOPIC = "schema.name.regex";
 
     public static final String SCHEMA_NAME_TO_TOPIC_DOC = "Map of schema name (key), "
@@ -36,13 +39,35 @@ public class ExtractTopicFromValueSchemaConfig extends AbstractConfig {
             + "first desired new topic value from value schema name "
             + "(for example (?:[.\\t]|^)([^.\\t]*)$ which parses the name after last .";
 
-    public ExtractTopicFromValueSchemaConfig(final Map<?, ?> originals) {
+    public ExtractTopicFromSchemaNameConfig(final Map<?, ?> originals) {
         super(config(), originals);
+
+        if (originals.containsKey(SCHEMA_NAME_TO_TOPIC_MAP) && originals.containsKey(REGEX_SCHEMA_NAME_TO_TOPIC)) {
+            throw new ConfigException(SCHEMA_NAME_TO_TOPIC_MAP + " and "
+                    +  REGEX_SCHEMA_NAME_TO_TOPIC + " should not be defined together.");
+        }
+
+        if (originals.containsKey(REGEX_SCHEMA_NAME_TO_TOPIC)) {
+            final String regex = (String) originals.get(REGEX_SCHEMA_NAME_TO_TOPIC);
+            try {
+                Pattern.compile(regex);
+            } catch (final PatternSyntaxException e) {
+                throw new ConfigException(regex  + " set as " + REGEX_SCHEMA_NAME_TO_TOPIC + " is not valid regex.");
+            }
+        }
+
+        if (originals.containsKey(SCHEMA_NAME_TO_TOPIC_MAP)) {
+            final String mapString = (String) originals.get(SCHEMA_NAME_TO_TOPIC_MAP);
+            if (!mapString.contains(":")) {
+                throw new ConfigException(SCHEMA_NAME_TO_TOPIC_MAP + " is not valid. Format should be: "
+                        + "\"SchemaValue1:NewValue1,SchemaValue2:NewValue2\"");
+            }
+        }
     }
 
     static ConfigDef config() {
         return new ConfigDef().define(
-                        SCHEMA_NAME_TO_TOPIC,
+                        SCHEMA_NAME_TO_TOPIC_MAP,
                         ConfigDef.Type.STRING,
                         null,
                         ConfigDef.Importance.LOW,
@@ -56,7 +81,7 @@ public class ExtractTopicFromValueSchemaConfig extends AbstractConfig {
     }
 
     Map<String, String> schemaNameToTopicMap() {
-        final String schemaNameToTopicValue = getString(SCHEMA_NAME_TO_TOPIC);
+        final String schemaNameToTopicValue = getString(SCHEMA_NAME_TO_TOPIC_MAP);
         if (null == schemaNameToTopicValue) {
             return Collections.emptyMap();
         }
