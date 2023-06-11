@@ -49,26 +49,26 @@ public abstract class ExtractTopicFromSchemaName<R extends ConnectRecord<R>> imp
         regex.ifPresent(s -> pattern = Pattern.compile(s));
     }
 
+    public abstract String schemaName(R record);
+
     @Override
     public R apply(final R record) {
 
-        if (null == record.valueSchema() || null == record.valueSchema().name()) {
-            throw new DataException(" value schema name can't be null: " + record);
-        }
+        final String schemaName = schemaName(record);
         // First check schema value name -> desired topic name mapping and use that if it is set.
-        if (schemaNameToTopicMap.containsKey(record.valueSchema().name())) {
-            return createConnectRecord(record, schemaNameToTopicMap.get(record.valueSchema().name()));
+        if (schemaNameToTopicMap.containsKey(schemaName)) {
+            return createConnectRecord(record, schemaNameToTopicMap.get(schemaName));
         }
         // Secondly check if regex parsing from schema value name is set and use that.
         if (pattern != null) {
-            final Matcher matcher = pattern.matcher(record.valueSchema().name());
+            final Matcher matcher = pattern.matcher(schemaName);
             if (matcher.find() && matcher.groupCount() == 1) {
                 return createConnectRecord(record, matcher.group(1));
             }
-            log.trace("No match with pattern {} from schema name {}", pattern.pattern(), record.valueSchema().name());
+            log.trace("No match with pattern {} from schema name {}", pattern.pattern(), schemaName);
         }
         // If no other configurations are set use value schema name as new topic name.
-        return createConnectRecord(record, record.valueSchema().name());
+        return createConnectRecord(record, schemaName);
     }
 
     private R createConnectRecord(final R record, final String newTopicName) {
@@ -90,7 +90,11 @@ public abstract class ExtractTopicFromSchemaName<R extends ConnectRecord<R>> imp
 
     public static class Value<R extends ConnectRecord<R>> extends ExtractTopicFromSchemaName<R> {
         @Override
-        public void close() {
+        public String schemaName(final R record) {
+            if (null == record.valueSchema() || null == record.valueSchema().name()) {
+                throw new DataException(" value schema name can't be null: " + record);
+            }
+            return record.valueSchema().name();
         }
     }
 }
