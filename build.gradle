@@ -115,6 +115,8 @@ dependencies {
 
     integrationTestImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     integrationTestImplementation "org.testcontainers:kafka:$testcontainersVersion" // this is not Kafka version
+
+    integrationTestImplementation "org.awaitility:awaitility:4.2.0"
     // Make test utils from 'test' available in 'integration-test'
     integrationTestImplementation sourceSets.test.output
 }

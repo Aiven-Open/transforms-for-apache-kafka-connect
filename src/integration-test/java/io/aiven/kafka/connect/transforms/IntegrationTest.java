@@ -19,12 +19,13 @@ package io.aiven.kafka.connect.transforms;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Supplier;
 
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -46,6 +47,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 @Testcontainers
 final class IntegrationTest {
@@ -194,33 +196,21 @@ final class IntegrationTest {
 
     }
 
-    final void checkMessageTopics(final TopicPartition originalTopicPartition, final TopicPartition newTopicPartition)
-            throws InterruptedException {
-        waitForCondition(
-            () -> consumer.endOffsets(Arrays.asList(originalTopicPartition, newTopicPartition))
-                    .values().stream().reduce(Long::sum).map(s -> s >= TestSourceConnector.MESSAGES_TO_PRODUCE)
-                    .orElse(false), 5000, "Messages appear in any topic"
-        );
+    void checkMessageTopics(final TopicPartition originalTopicPartition, final TopicPartition newTopicPartition) {
+        await("Messages appear in any topic")
+            .atMost(Duration.ofMillis(5000))
+            .pollDelay(Duration.ZERO)
+            .pollInterval(Duration.ofMillis(100))
+            .until(() ->
+                consumer.endOffsets(List.of(originalTopicPartition, newTopicPartition)).values().stream()
+                    .reduce(Long::sum)
+                    .filter(s -> s >= TestSourceConnector.MESSAGES_TO_PRODUCE).isPresent()
+            );
         final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(
             Arrays.asList(originalTopicPartition, newTopicPartition));
         // The original topic should be empty.
         assertThat(endOffsets.get(originalTopicPartition)).isZero();
         // The new topic should be non-empty.
         assertThat(endOffsets).containsEntry(newTopicPartition, TestSourceConnector.MESSAGES_TO_PRODUCE);
-    }
-
-    private void waitForCondition(final Supplier<Boolean> conditionChecker,
-                                  final long maxWaitMs,
-                                  final String condition) throws InterruptedException {
-        final long startTime = System.currentTimeMillis();
-
-        boolean testConditionMet;
-        while (!(testConditionMet = conditionChecker.get()) && ((System.currentTimeMillis() - startTime) < maxWaitMs)) {
-            Thread.sleep(Math.min(maxWaitMs, 100L));
-        }
-
-        if (!testConditionMet) {
-            throw new AssertionError("Condition not met within timeout " + maxWaitMs + ": " + condition);
-        }
     }
 }
