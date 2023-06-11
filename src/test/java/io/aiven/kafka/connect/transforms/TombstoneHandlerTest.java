@@ -27,30 +27,22 @@ import io.aiven.kafka.connect.transforms.TombstoneHandlerConfig.Behavior;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 final class TombstoneHandlerTest {
 
     @Test
     final void shouldDropTombstoneRecord() {
-        assertNull(tombstoneHandler(Behavior.DROP_SILENT)
-            .apply(record(null))
-        );
+        assertThat(tombstoneHandler(Behavior.DROP_SILENT).apply(record(null)))
+            .isNull();
     }
 
     @Test
     final void shouldThrowDataAccessExceptionOnTombstoneRecords() {
-        final Throwable t = assertThrows(
-            DataException.class,
-            () -> tombstoneHandler(Behavior.FAIL)
-                    .apply(record(null))
-        );
-        assertEquals(
-            "Tombstone record encountered, failing due to configured 'fail' behavior",
-            t.getMessage()
-        );
+        assertThatThrownBy(() -> tombstoneHandler(Behavior.FAIL).apply(record(null)))
+            .isInstanceOf(DataException.class)
+            .hasMessage("Tombstone record encountered, failing due to configured 'fail' behavior");
     }
 
     private SinkRecord record(final Object value) {

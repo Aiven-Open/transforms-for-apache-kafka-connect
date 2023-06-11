@@ -28,8 +28,7 @@ import org.apache.kafka.connect.source.SourceRecord;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class FilterByFieldValueTest {
 
@@ -43,21 +42,22 @@ class FilterByFieldValueTest {
             "field.value.matches", "false"
         ));
 
-        assertNull(
-            filter.apply(
-                prepareStructRecord(
-                    struct -> {
-                    },
-                    struct -> struct.put("op", "r")
-                )),
-            "Record with op 'r' should be filtered out");
+        assertThat(filter.apply(
+            prepareStructRecord(
+                struct -> {
+                },
+                struct -> struct.put("op", "r")
+            )))
+            .as("Record with op 'r' should be filtered out")
+            .isNull();
         final SourceRecord record = prepareStructRecord(
             struct -> {
             },
             struct -> struct.put("op", "u")
         );
-        assertEquals(record, filter.apply(record),
-            "Record with op not 'r' should be not filtered out");
+        assertThat(filter.apply(record))
+            .as("Record with op not 'r' should be not filtered out")
+            .isEqualTo(record);
     }
 
     @Test
@@ -69,15 +69,19 @@ class FilterByFieldValueTest {
             "field.value.matches", "false"
         ));
 
-        assertNull(filter.apply(prepareStructRecord(
+        assertThat(filter.apply(prepareStructRecord(
             struct -> struct.put("id", "A123"),
             struct -> {
-            })), "Record with id 'A132' should be filtered out");
+            })))
+            .as("Record with id 'A132' should be filtered out")
+            .isNull();
         final SourceRecord record = prepareStructRecord(
             struct -> struct.put("id", "A111"),
             struct -> {
             });
-        assertEquals(record, filter.apply(record), "Record with id not 'A132' should not be filtered out");
+        assertThat(filter.apply(record))
+            .as("Record with id not 'A132' should not be filtered out")
+            .isEqualTo(record);
     }
 
     @Test
@@ -89,20 +93,22 @@ class FilterByFieldValueTest {
             "field.value.matches", "true"
         ));
 
-        assertNull(
-            filter.apply(
-                prepareStructRecord(
-                    struct -> {
-                    },
-                    struct -> struct.put("op", "u")
-                )),
-            "Record with op not equal to 'r' should be filtered out");
+        assertThat(filter.apply(
+            prepareStructRecord(
+                struct -> {
+                },
+                struct -> struct.put("op", "u")
+            )))
+            .as("Record with op not equal to 'r' should be filtered out")
+            .isNull();
         final SourceRecord record = prepareStructRecord(
             struct -> {
             },
             struct -> struct.put("op", "r")
         );
-        assertEquals(record, filter.apply(record), "Record with op equal to 'r' should not be filtered out");
+        assertThat(filter.apply(record))
+            .as("Record with op equal to 'r' should not be filtered out")
+            .isEqualTo(record);
     }
 
     @Test
@@ -114,20 +120,22 @@ class FilterByFieldValueTest {
             "field.value.matches", "true"
         ));
 
-        assertNull(
-            filter.apply(
-                prepareStructRecord(
-                    struct -> struct.put("id", "111"),
-                    struct -> {
-                    }
-                )),
-            "Record with id not equal to 'A132' should be filtered out");
+        assertThat(filter.apply(
+            prepareStructRecord(
+                struct -> struct.put("id", "111"),
+                struct -> {
+                }
+            )))
+            .as("Record with id not equal to 'A132' should be filtered out")
+            .isNull();
         final SourceRecord record = prepareStructRecord(
             struct -> struct.put("id", "A123"),
             struct -> {
             }
         );
-        assertEquals(record, filter.apply(record), "Record with id equal to 'A132' should not be filtered out");
+        assertThat(filter.apply(record))
+            .as("Record with id equal to 'A132' should not be filtered out")
+            .isEqualTo(record);
     }
 
     @Test
@@ -139,10 +147,13 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> "A42", () -> Map.of("language", "Javascript"))),
-            "The record should be filtered out");
+        assertThat(filterByFieldValue.apply(prepareRecord(() -> "A42", () -> Map.of("language", "Javascript"))))
+            .as("The record should be filtered out")
+            .isNull();
         final SourceRecord record = prepareRecord(() -> "A42", () -> Map.of("language", "Rust"));
-        assertEquals(record, filterByFieldValue.apply(record), "The record should not be filtered out");
+        assertThat(filterByFieldValue.apply(record))
+            .as("The record should not be filtered out")
+            .isEqualTo(record);
     }
 
     @Test
@@ -154,10 +165,13 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "A42")),
-            "The record should be filtered out");
+        assertThat(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "A42")))
+            .as("The record should be filtered out")
+            .isNull();
         final SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> "A42");
-        assertEquals(record, filterByFieldValue.apply(record), "The record should not be filtered out");
+        assertThat(filterByFieldValue.apply(record))
+            .as("The record should not be filtered out")
+            .isEqualTo(record);
     }
 
     @Test
@@ -168,10 +182,13 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> "A42", () -> Map.of("language", "Javascript"))),
-            "The record should be filtered out");
+        assertThat(filterByFieldValue.apply(prepareRecord(() -> "A42", () -> Map.of("language", "Javascript"))))
+            .as("The record should be filtered out")
+            .isNull();
         final SourceRecord record = prepareRecord(() -> "43", () -> Map.of("language", "Rust"));
-        assertEquals(record, filterByFieldValue.apply(record), "The record should be filtered out");
+        assertThat(filterByFieldValue.apply(record))
+            .as("The record should be filtered out")
+            .isEqualTo(record);
     }
 
     @Test
@@ -182,10 +199,13 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "A42")),
-            "The record should be filtered out");
+        assertThat(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> "A42")))
+            .as("The record should be filtered out")
+            .isNull();
         final SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> "43");
-        assertEquals(record, filterByFieldValue.apply(record), "The record should be filtered out");
+        assertThat(filterByFieldValue.apply(record))
+            .as("The record should be filtered out")
+            .isEqualTo(record);
     }
 
     @Test
@@ -196,10 +216,13 @@ class FilterByFieldValueTest {
         configs.put("field.value.matches", "false");
         filterByFieldValue.configure(configs);
 
-        assertNull(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> (byte) 42)),
-            "The record should be filtered out");
+        assertThat(filterByFieldValue.apply(prepareRecord(() -> Map.of("language", "Javascript"), () -> (byte) 42)))
+            .as("The record should be filtered out")
+            .isNull();
         final SourceRecord record = prepareRecord(() -> Map.of("language", "Rust"), () -> (byte) 43);
-        assertEquals(record, filterByFieldValue.apply(record), "The record should be filtered out");
+        assertThat(filterByFieldValue.apply(record))
+            .as("The record should be filtered out")
+            .isEqualTo(record);
     }
 
     private SourceRecord prepareRecord(

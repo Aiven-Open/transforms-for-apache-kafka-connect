@@ -26,13 +26,13 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class HexTest {
     @Test
     void testEncodeEmpty() {
         final byte[] bytes = new byte[0];
-        assertEquals("", Hex.encode(bytes));
+        assertThat(Hex.encode(bytes)).isEmpty();
     }
 
     @Test
@@ -41,7 +41,7 @@ public class HexTest {
         for (int i = 0; i < 256; i++) {
             final byte b = (byte) i;
             bytes[0] = b;
-            assertEquals(String.format("%02x", b), Hex.encode(bytes));
+            assertThat(Hex.encode(bytes)).isEqualTo(String.format("%02x", b));
         }
     }
 
@@ -53,7 +53,7 @@ public class HexTest {
             // Use the string as a byte array and hex-encode it.
             final byte[] bytes = s.getBytes(Charset.defaultCharset());
             final String encoded = Hex.encode(bytes);
-            assertEquals(bytes.length * 2, encoded.length());
+            assertThat(encoded).hasSize(bytes.length * 2);
 
             // Decode the string back and compare to the original.
             final char[] encodedChars = encoded.toCharArray();
@@ -62,7 +62,7 @@ public class HexTest {
                 final String s1 = new String(encodedChars, i, 2);
                 decodedBytes[i / 2] = (byte) Integer.parseInt(s1, 16);
             }
-            assertEquals(new String(decodedBytes, Charset.defaultCharset()), s);
+            assertThat(s).isEqualTo(new String(decodedBytes, Charset.defaultCharset()));
         }
     }
 }

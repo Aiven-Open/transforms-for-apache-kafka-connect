@@ -28,25 +28,25 @@ import static io.aiven.kafka.connect.transforms.ConcatFieldsConfig.DELIMITER_CON
 import static io.aiven.kafka.connect.transforms.ConcatFieldsConfig.FIELD_NAMES_CONFIG;
 import static io.aiven.kafka.connect.transforms.ConcatFieldsConfig.FIELD_REPLACE_MISSING_CONFIG;
 import static io.aiven.kafka.connect.transforms.ConcatFieldsConfig.OUTPUT_FIELD_NAME_CONFIG;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ConcatFieldsConfigTest {
     @Test
     void emptyConfig() {
         final Map<String, String> props = new HashMap<>();
-        final Throwable e = assertThrows(ConfigException.class, () -> new ConcatFieldsConfig(props));
-        assertEquals("Missing required configuration \"field.names\" which has no default value.",
-            e.getMessage());
+        assertThatThrownBy(() -> new ConcatFieldsConfig(props))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Missing required configuration \"field.names\" which has no default value.");
     }
 
     @Test
     void emptyFieldName() {
         final Map<String, String> props = new HashMap<>();
         props.put(FIELD_NAMES_CONFIG, "");
-        final Throwable e = assertThrows(ConfigException.class, () -> new ConcatFieldsConfig(props));
-        assertEquals("Missing required configuration \"output.field.name\" which has no default value.",
-            e.getMessage());
+        assertThatThrownBy(() -> new ConcatFieldsConfig(props))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Missing required configuration \"output.field.name\" which has no default value.");
     }
 
     @Test
@@ -57,9 +57,9 @@ class ConcatFieldsConfigTest {
         props.put(DELIMITER_CONFIG, "-");
         props.put(FIELD_REPLACE_MISSING_CONFIG, "*");
         final ConcatFieldsConfig config = new ConcatFieldsConfig(props);
-        assertEquals(Arrays.asList("test", "foo", "bar"), config.fieldNames());
-        assertEquals("combined", config.outputFieldName());
-        assertEquals("-", config.delimiter());
-        assertEquals("*", config.fieldReplaceMissing());
+        assertThat(config.fieldNames()).isEqualTo(Arrays.asList("test", "foo", "bar"));
+        assertThat(config.outputFieldName()).isEqualTo("combined");
+        assertThat(config.delimiter()).isEqualTo("-");
+        assertThat(config.fieldReplaceMissing()).isEqualTo("*");
     }
 }

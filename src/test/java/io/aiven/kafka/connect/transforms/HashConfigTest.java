@@ -18,7 +18,6 @@ package io.aiven.kafka.connect.transforms;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.kafka.common.config.ConfigException;
 
@@ -26,17 +25,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class HashConfigTest {
     @Test
     void defaults() {
         final Map<String, String> props = new HashMap<>();
-        final Throwable e = assertThrows(ConfigException.class,
-            () -> new HashConfig(props));
-        assertEquals("Missing required configuration \"function\" which has no default value.",
-              e.getMessage());
+        assertThatThrownBy(() -> new HashConfig(props))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Missing required configuration \"function\" which has no default value.");
     }
 
     @ParameterizedTest
@@ -46,7 +44,7 @@ class HashConfigTest {
         props.put("skip.missing.or.null", Boolean.toString(skipMissingOrNull));
         props.put("function", "sha256");
         final HashConfig config = new HashConfig(props);
-        assertEquals(skipMissingOrNull, config.skipMissingOrNull());
+        assertThat(config.skipMissingOrNull()).isEqualTo(skipMissingOrNull);
     }
 
     @Test
@@ -54,7 +52,7 @@ class HashConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put("function", "md5");
         final HashConfig config = new HashConfig(props);
-        assertEquals(HashConfig.HashFunction.MD5, config.hashFunction());
+        assertThat(config.hashFunction()).isEqualTo(HashConfig.HashFunction.MD5);
     }
 
     @Test
@@ -62,7 +60,7 @@ class HashConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put("function", "sha1");
         final HashConfig config = new HashConfig(props);
-        assertEquals(HashConfig.HashFunction.SHA1, config.hashFunction());
+        assertThat(config.hashFunction()).isEqualTo(HashConfig.HashFunction.SHA1);
     }
 
     @Test
@@ -70,7 +68,7 @@ class HashConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put("function", "sha256");
         final HashConfig config = new HashConfig(props);
-        assertEquals(HashConfig.HashFunction.SHA256, config.hashFunction());
+        assertThat(config.hashFunction()).isEqualTo(HashConfig.HashFunction.SHA256);
     }
 
     @Test
@@ -79,7 +77,7 @@ class HashConfigTest {
         props.put("field.name", "");
         props.put("function", "sha256");
         final HashConfig config = new HashConfig(props);
-        assertEquals(Optional.empty(), config.fieldName());
+        assertThat(config.fieldName()).isNotPresent();
     }
 
     @Test
@@ -88,7 +86,7 @@ class HashConfigTest {
         props.put("field.name", "test");
         props.put("function", "sha256");
         final HashConfig config = new HashConfig(props);
-        assertEquals(Optional.of("test"), config.fieldName());
-        assertEquals(HashConfig.HashFunction.SHA256, config.hashFunction());
+        assertThat(config.fieldName()).hasValue("test");
+        assertThat(config.hashFunction()).isEqualTo(HashConfig.HashFunction.SHA256);
     }
 }

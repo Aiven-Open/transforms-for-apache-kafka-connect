@@ -45,7 +45,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 final class IntegrationTest {
@@ -204,9 +204,9 @@ final class IntegrationTest {
         final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(
             Arrays.asList(originalTopicPartition, newTopicPartition));
         // The original topic should be empty.
-        assertEquals(0, endOffsets.get(originalTopicPartition));
+        assertThat(endOffsets.get(originalTopicPartition)).isZero();
         // The new topic should be non-empty.
-        assertEquals(TestSourceConnector.MESSAGES_TO_PRODUCE, endOffsets.get(newTopicPartition));
+        assertThat(endOffsets).containsEntry(newTopicPartition, TestSourceConnector.MESSAGES_TO_PRODUCE);
     }
 
     private void waitForCondition(final Supplier<Boolean> conditionChecker,

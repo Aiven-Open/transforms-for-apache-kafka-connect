@@ -30,7 +30,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 abstract class HashTest {
@@ -71,10 +72,9 @@ abstract class HashTest {
     void noFieldName_NullValue_NoSkip() {
         final Schema schema = SchemaBuilder.STRING_SCHEMA;
         final SinkRecord originalRecord = record(schema, null);
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation(null, false, DEFAULT_HASH_FUNCTION).apply(originalRecord));
-        assertEquals(dataPlace() + " can't be null: " + originalRecord,
-            e.getMessage());
+        assertThatThrownBy(() -> transformation(null, false, DEFAULT_HASH_FUNCTION).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(dataPlace() + " can't be null: " + originalRecord);
     }
 
     @Test
@@ -84,7 +84,7 @@ abstract class HashTest {
         final Hash<SinkRecord> transform = transformation(null, true, DEFAULT_HASH_FUNCTION);
         final SinkRecord result = transform.apply(originalRecord);
         // No changes.
-        assertEquals(originalRecord, result);
+        assertThat(result).isEqualTo(originalRecord);
     }
 
     @Test
@@ -92,7 +92,7 @@ abstract class HashTest {
         final SinkRecord originalRecord = record(null, null);
         final Throwable e = assertThrows(DataException.class,
             () -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
-        assertEquals(dataPlace() + " schema can't be null: " + originalRecord, e.getMessage());
+        assertThat(e.getMessage()).isEqualTo(dataPlace() + " schema can't be null: " + originalRecord);
     }
 
     @Test
@@ -101,10 +101,9 @@ abstract class HashTest {
         final SinkRecord originalRecord = record(schema, new Struct(schema));
         final Throwable e = assertThrows(DataException.class,
             () -> transformation(null, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
-        assertEquals(dataPlace()
-                        + " schema type must be STRING if field name is not specified: "
-                        + originalRecord,
-                e.getMessage());
+        assertThat(e.getMessage()).isEqualTo(dataPlace()
+            + " schema type must be STRING if field name is not specified: "
+            + originalRecord);
     }
 
     @ParameterizedTest
@@ -115,7 +114,7 @@ abstract class HashTest {
         final Hash<SinkRecord> transform = transformation(null, false, hashFunction);
         final SinkRecord result = transform.apply(originalRecord);
         final String newValue = hash(hashFunction, NON_EMPTY_FIELD_VALUE);
-        assertEquals(setNewValue(originalRecord, newValue), result);
+        assertThat(result).isEqualTo(setNewValue(originalRecord, newValue));
     }
 
     @ParameterizedTest
@@ -126,7 +125,7 @@ abstract class HashTest {
         final Hash<SinkRecord> transform = transformation(null, false, hashFunction);
         final SinkRecord result = transform.apply(originalRecord);
         final String newValue = hash(hashFunction, EMPTY_FIELD_VALUE);
-        assertEquals(setNewValue(originalRecord, newValue), result);
+        assertThat(result).isEqualTo(setNewValue(originalRecord, newValue));
     }
 
     @Test
@@ -135,10 +134,9 @@ abstract class HashTest {
                 .field(FIELD, SchemaBuilder.OPTIONAL_STRING_SCHEMA)
                 .schema();
         final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, null));
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, false, DEFAULT_HASH_FUNCTION).apply(originalRecord));
-        assertEquals(FIELD + " in " + dataPlace() + " can't be null: " + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation(FIELD, false, DEFAULT_HASH_FUNCTION).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " in " + dataPlace() + " can't be null: " + originalRecord);
     }
 
     @Test
@@ -146,10 +144,9 @@ abstract class HashTest {
         final Schema schema = SchemaBuilder.struct()
                 .schema();
         final SinkRecord originalRecord = record(schema, new Struct(schema));
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, false, DEFAULT_HASH_FUNCTION).apply(originalRecord));
-        assertEquals(FIELD + " in " + dataPlace() + " schema can't be missing: " + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation(FIELD, false, DEFAULT_HASH_FUNCTION).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " in " + dataPlace() + " schema can't be missing: " + originalRecord);
     }
 
     @Test
@@ -165,7 +162,7 @@ abstract class HashTest {
         final Hash<SinkRecord> transform = transformation(FIELD, true, DEFAULT_HASH_FUNCTION);
         final SinkRecord result = transform.apply(originalRecord);
         // No changes.
-        assertEquals(originalRecord, result);
+        assertThat(result).isEqualTo(originalRecord);
     }
 
     @Test
@@ -176,17 +173,15 @@ abstract class HashTest {
         final Hash<SinkRecord> transform = transformation(FIELD, true, DEFAULT_HASH_FUNCTION);
         final SinkRecord result = transform.apply(originalRecord);
         // No changes.
-        assertEquals(originalRecord, result);
+        assertThat(result).isEqualTo(originalRecord);
     }
 
     @Test
     void fieldName_NonStruct() {
         final SinkRecord originalRecord = record(SchemaBuilder.INT8_SCHEMA, "some");
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
-        assertEquals(dataPlace() + " schema type must be STRUCT if field name is specified: "
-                        + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(dataPlace() + " schema type must be STRUCT if field name is specified: " + originalRecord);
     }
 
     @Test
@@ -195,10 +190,9 @@ abstract class HashTest {
                 .field(FIELD, SchemaBuilder.STRING_SCHEMA)
                 .schema();
         final SinkRecord originalRecord = record(schema, null);
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
-        assertEquals(dataPlace() + " can't be null if field name is specified: " + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(dataPlace() + " can't be null if field name is specified: " + originalRecord);
     }
 
     @Test
@@ -209,11 +203,9 @@ abstract class HashTest {
                 .schema();
         final SinkRecord originalRecord = record(
                 schema, new Struct(schema).put(FIELD, new Struct(innerSchema)));
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord));
-        assertEquals(FIELD + " schema type in " + dataPlace() + " must be STRING: "
-                        + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation(FIELD, true, DEFAULT_HASH_FUNCTION).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " schema type in " + dataPlace() + " must be STRING: " + originalRecord);
     }
 
     @ParameterizedTest
@@ -232,7 +224,7 @@ abstract class HashTest {
         final Struct newValue = new Struct(schema)
                 .put(FIELD, hash(hashFunction, NON_EMPTY_FIELD_VALUE))
                 .put(UNAFFECTED_FIELD, UNAFFECTED_FIELD_VALUE);
-        assertEquals(setNewValue(originalRecord, newValue), result);
+        assertThat(result).isEqualTo(setNewValue(originalRecord, newValue));
     }
 
     @ParameterizedTest
@@ -251,7 +243,7 @@ abstract class HashTest {
         final Struct newValue = new Struct(schema)
                 .put(FIELD, hash(hashFunction, EMPTY_FIELD_VALUE))
                 .put(UNAFFECTED_FIELD, UNAFFECTED_FIELD_VALUE);
-        assertEquals(setNewValue(originalRecord, newValue), result);
+        assertThat(result).isEqualTo(setNewValue(originalRecord, newValue));
     }
 
     @ParameterizedTest
@@ -264,7 +256,7 @@ abstract class HashTest {
             final SinkRecord originalRecord = record(schema, NON_EMPTY_FIELD_VALUE);
             final SinkRecord result = transform.apply(originalRecord);
             final String newValue = hash(hashFunction, NON_EMPTY_FIELD_VALUE);
-            assertEquals(setNewValue(originalRecord, newValue), result);
+            assertThat(result).isEqualTo(setNewValue(originalRecord, newValue));
         }
     }
 
