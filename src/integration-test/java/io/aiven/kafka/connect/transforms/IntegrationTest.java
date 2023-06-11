@@ -56,6 +56,11 @@ final class IntegrationTest {
     private final TopicPartition newTopicPartition0 =
         new TopicPartition(TestSourceConnector.NEW_TOPIC, 0);
 
+    private final TopicPartition originalTopicValueFromSchema =
+            new TopicPartition(TopicFromValueSchemaConnector.TOPIC, 0);
+
+    private final TopicPartition newTopicValueFromSchema =
+            new TopicPartition(TopicFromValueSchemaConnector.NAME, 0);
     private static File pluginsDir;
 
     @Container
@@ -92,7 +97,9 @@ final class IntegrationTest {
         assert integrationTestClassesPath.exists();
 
         final Class<?>[] testConnectorClasses = new Class[]{
-            TestSourceConnector.class, TestSourceConnector.TestSourceConnectorTask.class
+            TestSourceConnector.class, TestSourceConnector.TestSourceConnectorTask.class,
+            TopicFromValueSchemaConnector.class,
+            TopicFromValueSchemaConnector.TopicFromValueSchemaConnectorTask.class
         };
         for (final Class<?> clazz : testConnectorClasses) {
             final String packageName = clazz.getPackage().getName();
@@ -127,7 +134,12 @@ final class IntegrationTest {
 
         final NewTopic originalTopic = new NewTopic(TestSourceConnector.ORIGINAL_TOPIC, 1, (short) 1);
         final NewTopic newTopic = new NewTopic(TestSourceConnector.NEW_TOPIC, 1, (short) 1);
-        adminClient.createTopics(Arrays.asList(originalTopic, newTopic)).all().get();
+        final NewTopic originalTopicForExtractTopicFromValue =
+                new NewTopic(TopicFromValueSchemaConnector.TOPIC, 1, (short) 1);
+        final NewTopic newTopicForExtractTopicFromValue  =
+                new NewTopic(TopicFromValueSchemaConnector.NAME, 1, (short) 1);
+        adminClient.createTopics(Arrays.asList(originalTopic, newTopic, originalTopicForExtractTopicFromValue,
+                newTopicForExtractTopicFromValue)).all().get();
 
         connectRunner = new ConnectRunner(pluginsDir, kafka.getBootstrapServers());
         connectRunner.start();
@@ -159,19 +171,42 @@ final class IntegrationTest {
         connectorConfig.put("tasks.max", "1");
         connectRunner.createConnector(connectorConfig);
 
+        checkMessageTopics(originalTopicPartition0, newTopicPartition0);
+    }
+
+    @Test
+    @Timeout(10)
+    final void testExtractTopicFromValueSchemaName() throws ExecutionException, InterruptedException, IOException {
+        final Map<String, String> connectorConfig = new HashMap<>();
+        connectorConfig.put("name", "test-source-connector");
+        connectorConfig.put("connector.class", TopicFromValueSchemaConnector.class.getName());
+        connectorConfig.put("key.converter", "org.apache.kafka.connect.json.JsonConverter");
+        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+        connectorConfig.put("value.converter.value.subject.name.strategy",
+                "io.confluent.kafka.serializers.subject.RecordNameStrategy");
+        connectorConfig.put("transforms",
+                "ExtractTopicFromSchemaName");
+        connectorConfig.put("transforms.ExtractTopicFromSchemaName.type",
+                "io.aiven.kafka.connect.transforms.ExtractTopicFromSchemaName$Value");
+        connectorConfig.put("tasks.max", "1");
+        connectRunner.createConnector(connectorConfig);
+        checkMessageTopics(originalTopicValueFromSchema, newTopicValueFromSchema);
+
+    }
+
+    final void checkMessageTopics(final TopicPartition originalTopicPartition, final TopicPartition newTopicPartition)
+            throws InterruptedException {
         waitForCondition(
-            () -> consumer
-                .endOffsets(Arrays.asList(originalTopicPartition0, newTopicPartition0))
-                .values().stream().reduce(Long::sum).map(s -> s >= TestSourceConnector.MESSAGES_TO_PRODUCE)
-                .orElse(false),
-            5000, "Messages appear in any topic"
+            () -> consumer.endOffsets(Arrays.asList(originalTopicPartition, newTopicPartition))
+                    .values().stream().reduce(Long::sum).map(s -> s >= TestSourceConnector.MESSAGES_TO_PRODUCE)
+                    .orElse(false), 5000, "Messages appear in any topic"
         );
         final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(
-            Arrays.asList(originalTopicPartition0, newTopicPartition0));
+            Arrays.asList(originalTopicPartition, newTopicPartition));
         // The original topic should be empty.
-        assertEquals(0, endOffsets.get(originalTopicPartition0));
+        assertEquals(0, endOffsets.get(originalTopicPartition));
         // The new topic should be non-empty.
-        assertEquals(TestSourceConnector.MESSAGES_TO_PRODUCE, endOffsets.get(newTopicPartition0));
+        assertEquals(TestSourceConnector.MESSAGES_TO_PRODUCE, endOffsets.get(newTopicPartition));
     }
 
     private void waitForCondition(final Supplier<Boolean> conditionChecker,

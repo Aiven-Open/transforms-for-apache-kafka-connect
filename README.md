@@ -162,6 +162,35 @@ Either `field.value` or `field.value.pattern` must be defined to apply filter.
 
 Only, `string`, `numeric` and `boolean` types are considered for matching purposes, other types are ignored.
 
+### `ExtractTopicFromSchemaName`
+
+This transformation checks the  schema name and if it exists uses it as the topic name.
+
+- `io.aiven.kafka.connect.transforms.ExtractTopicFromSchemaName$Value` - works on value schema name.
+
+Currently this transformation only has implementation for record value schema name. Key schema name is not implemented.
+
+By default (if schema.name.topic-map or the chema.name.regex is not set) transformation uses the content of the schema.name field.
+
+The transformation defines the following optional configurations which can be used to tamper the schema.name:
+
+- `schema.name.topic-map` - Map that contains the schema.name value and corresponding new topic name value that should be used instead. Format is "SchemaValue1:NewValue1,SchemaValue2:NewValue2" so key:value pairs as comma separated list.
+- `schema.name.regex` - RegEx that should be used to parse the schema.name to desired value. For example for example `(?:[.]|^)([^.]*)$` which parses the name after last dot.
+
+Here is an example of this transformation configuration (using :schema.name.topic-map)
+
+```properties
+transforms=ExtractTopicFromSchemaName
+transforms.ExtractTopicFromSchemaName.type=io.aiven.kafka.connect.transforms.ExtractTopicFromSchemaName$Value
+transforms.ExtractTopicFromSchemaName.schema.name.topic-map=com.acme.schema.SchemaNameToTopic1:TheNameToReplace1,com.acme.schema.SchemaNameToTopic2:TheNameToReplace2
+
+```
+And here is an example of this transformation configuration (using :schema.name.regex)
+```properties
+transforms=ExtractTopicFromValueSchema
+transforms.ExtractTopicFromValueSchema.type=io.aiven.kafka.connect.transforms.ExtractTopicFromSchemaName$Value
+transforms.ExtractTopicFromValueSchema.schema.name.regex=(?:[.]|^)([^.]*)$
+
 ## License
 
 This project is licensed under the [Apache License, Version 2.0](LICENSE).
@@ -169,3 +198,4 @@ This project is licensed under the [Apache License, Version 2.0](LICENSE).
 ## Trademarks
 
 Apache Kafka and Apache Kafka Connect are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries.
+
