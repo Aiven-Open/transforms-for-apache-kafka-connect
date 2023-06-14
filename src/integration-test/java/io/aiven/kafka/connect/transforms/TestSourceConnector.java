@@ -36,7 +36,7 @@ import org.apache.kafka.connect.source.SourceTask;
  * <p>It just produces a fixed number of struct records.
  */
 public class TestSourceConnector extends SourceConnector {
-    static final int MESSAGES_TO_PRODUCE = 10;
+    static final long MESSAGES_TO_PRODUCE = 10L;
 
     static final String ORIGINAL_TOPIC = "original-topic";
     static final String NEW_TOPIC = "new-topic";

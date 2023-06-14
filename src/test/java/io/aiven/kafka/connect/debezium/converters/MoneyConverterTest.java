@@ -30,9 +30,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class MoneyConverterTest {
 
@@ -59,11 +58,11 @@ public class MoneyConverterTest {
     @Test
     void shouldRegisterCorrectSchema() {
         transform.configure(prop);
-        assertNull(registration.currFieldSchema);
+        assertThat(registration.currFieldSchema).isNull();
         transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
-        assertEquals(registration.currFieldSchema.schema().name(), "price");
-        assertEquals(registration.currFieldSchema.schema().type(), Schema.Type.STRING);
+        assertThat(registration.currFieldSchema.schema().name()).isEqualTo("price");
+        assertThat(registration.currFieldSchema.schema().type()).isEqualTo(Schema.Type.STRING);
     }
 
     @Test
@@ -72,40 +71,40 @@ public class MoneyConverterTest {
 
         transform.converterFor(new DummyRelationalColumn(), registration);
 
-        assertNull(registration.currFieldSchema);
-        assertNull(registration.currConverter);
+        assertThat(registration.currFieldSchema).isNull();
+        assertThat(registration.currConverter).isNull();
     }
 
     @Test
     void shouldFormatDataToMoneyFormat() {
-        assertNull(registration.currConverter);
+        assertThat(registration.currConverter).isNull();
         transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
         final String result = (String) registration.currConverter.convert(BigDecimal.valueOf(103.6999));
-        assertEquals(result, "103.70");
+        assertThat(result).isEqualTo("103.70");
 
         final String result2 = (String) registration.currConverter.convert((long) 103);
-        assertEquals(result2, "103.00");
+        assertThat(result2).isEqualTo("103.00");
     }
 
     @Test
     void shouldFailIfDataIsNotBigDecimal() {
-        assertNull(registration.currConverter);
+        assertThat(registration.currConverter).isNull();
         transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
-        final Throwable e = assertThrows(IllegalArgumentException.class,
-            () -> registration.currConverter.convert("103.6999"));
-        assertEquals(e.getMessage(), "Money type should have BigDecimal type");
+        assertThatThrownBy(() -> registration.currConverter.convert("103.6999"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Money type should have BigDecimal type");
     }
 
     @Test
     void shouldFailIfDataIsMissing() {
-        assertNull(registration.currConverter);
+        assertThat(registration.currConverter).isNull();
         transform.converterFor(new MoneyTestRelationalColumn(), registration);
 
-        final Throwable e = assertThrows(IllegalArgumentException.class,
-            () -> registration.currConverter.convert(null));
-        assertEquals(e.getMessage(), "Money column is not optional, but data is null");
+        assertThatThrownBy(() -> registration.currConverter.convert(null))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Money column is not optional, but data is null");
     }
 
     @Test
@@ -117,7 +116,7 @@ public class MoneyConverterTest {
         transform.converterFor(moneyColumn, registration);
 
         final String result = (String) registration.currConverter.convert(null);
-        assertNull(result);
+        assertThat(result).isNull();
     }
 
     class StubConverterRegistration implements CustomConverter.ConverterRegistration<SchemaBuilder> {

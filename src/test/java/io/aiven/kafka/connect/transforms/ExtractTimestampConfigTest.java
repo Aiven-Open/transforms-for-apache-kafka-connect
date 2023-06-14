@@ -23,25 +23,25 @@ import org.apache.kafka.common.config.ConfigException;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ExtractTimestampConfigTest {
     @Test
     void emptyConfig() {
         final Map<String, String> props = new HashMap<>();
-        final Throwable e = assertThrows(ConfigException.class, () -> new ExtractTimestampConfig(props));
-        assertEquals("Missing required configuration \"field.name\" which has no default value.",
-            e.getMessage());
+        assertThatThrownBy(() -> new ExtractTimestampConfig(props))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Missing required configuration \"field.name\" which has no default value.");
     }
 
     @Test
     void emptyFieldName() {
         final Map<String, String> props = new HashMap<>();
         props.put("field.name", "");
-        final Throwable e = assertThrows(ConfigException.class, () -> new ExtractTimestampConfig(props));
-        assertEquals("Invalid value  for configuration field.name: String must be non-empty",
-            e.getMessage());
+        assertThatThrownBy(() -> new ExtractTimestampConfig(props))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value  for configuration field.name: String must be non-empty");
     }
 
     @Test
@@ -49,7 +49,7 @@ class ExtractTimestampConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put("field.name", "test");
         final ExtractTimestampConfig config = new ExtractTimestampConfig(props);
-        assertEquals("test", config.fieldName());
+        assertThat(config.fieldName()).isEqualTo("test");
     }
 
     @Test
@@ -57,7 +57,7 @@ class ExtractTimestampConfigTest {
         final var props = new HashMap<>();
         props.put("field.name", "test");
         final var config = new ExtractTimestampConfig(props);
-        assertEquals(ExtractTimestampConfig.TimestampResolution.MILLISECONDS, config.timestampResolution());
+        assertThat(config.timestampResolution()).isEqualTo(ExtractTimestampConfig.TimestampResolution.MILLISECONDS);
     }
 
     @Test
@@ -69,7 +69,7 @@ class ExtractTimestampConfigTest {
                 ExtractTimestampConfig.TimestampResolution.SECONDS.resolution
         );
         final var config = new ExtractTimestampConfig(props);
-        assertEquals(ExtractTimestampConfig.TimestampResolution.SECONDS, config.timestampResolution());
+        assertThat(config.timestampResolution()).isEqualTo(ExtractTimestampConfig.TimestampResolution.SECONDS);
     }
 
     @Test
@@ -81,7 +81,7 @@ class ExtractTimestampConfigTest {
                 ExtractTimestampConfig.TimestampResolution.MILLISECONDS.resolution
         );
         final var config = new ExtractTimestampConfig(props);
-        assertEquals(ExtractTimestampConfig.TimestampResolution.MILLISECONDS, config.timestampResolution());
+        assertThat(config.timestampResolution()).isEqualTo(ExtractTimestampConfig.TimestampResolution.MILLISECONDS);
     }
 
     @Test
@@ -92,11 +92,10 @@ class ExtractTimestampConfigTest {
                 ExtractTimestampConfig.EPOCH_RESOLUTION_CONFIG,
                 "foo"
         );
-        final var e = assertThrows(ConfigException.class, () -> new ExtractTimestampConfig(props));
-        assertEquals(
-                "Invalid value foo for configuration timestamp.resolution: "
-                        + "Unsupported resolution type 'foo'. Supported are: milliseconds, seconds",
-                e.getMessage());
+        assertThatThrownBy(() -> new ExtractTimestampConfig(props))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value foo for configuration timestamp.resolution: "
+                + "Unsupported resolution type 'foo'. Supported are: milliseconds, seconds");
     }
 
 }

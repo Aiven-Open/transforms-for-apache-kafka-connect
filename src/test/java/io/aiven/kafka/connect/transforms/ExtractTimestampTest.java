@@ -35,8 +35,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 abstract class ExtractTimestampTest {
     private static final String FIELD = "test_field";
@@ -44,26 +44,26 @@ abstract class ExtractTimestampTest {
     @Test
     void recordNotStructOrMap() {
         final SinkRecord originalRecord = record(SchemaBuilder.INT8_SCHEMA, (byte) 123);
-        final Throwable e = assertThrows(DataException.class, () -> transformation().apply(originalRecord));
-        assertEquals(keyOrValue() + " type must be STRUCT or MAP: " + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(keyOrValue() + " type must be STRUCT or MAP: " + originalRecord);
     }
 
     @Test
     void recordStructNull() {
         final Schema schema = SchemaBuilder.struct().schema();
         final SinkRecord originalRecord = record(schema, null);
-        final Throwable e = assertThrows(DataException.class, () -> transformation().apply(originalRecord));
-        assertEquals(keyOrValue() + " can't be null: " + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(keyOrValue() + " can't be null: " + originalRecord);
     }
 
     @Test
     void recordMapNull() {
         final SinkRecord originalRecord = record(null, null);
-        final Throwable e = assertThrows(DataException.class, () -> transformation().apply(originalRecord));
-        assertEquals(keyOrValue() + " can't be null: " + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(keyOrValue() + " can't be null: " + originalRecord);
     }
 
     @Test
@@ -72,17 +72,17 @@ abstract class ExtractTimestampTest {
                 .field(FIELD, Schema.INT64_SCHEMA)
                 .build();
         final SinkRecord originalRecord = record(null, new Struct(schema));
-        final Throwable e = assertThrows(DataException.class, () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be present and its value can't be null: " + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " field must be present and its value can't be null: " + originalRecord);
     }
 
     @Test
     void mapWithMissingField() {
         final SinkRecord originalRecord = record(null, new HashMap<>());
-        final Throwable e = assertThrows(DataException.class, () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be present and its value can't be null: " + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " field must be present and its value can't be null: " + originalRecord);
     }
 
     @Test
@@ -91,9 +91,9 @@ abstract class ExtractTimestampTest {
                 .field(FIELD, Schema.OPTIONAL_INT64_SCHEMA)
                 .build();
         final SinkRecord originalRecord = record(null, new Struct(schema).put(FIELD, null));
-        final Throwable e = assertThrows(DataException.class, () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be present and its value can't be null: " + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " field must be present and its value can't be null: " + originalRecord);
     }
 
     @Test
@@ -101,9 +101,9 @@ abstract class ExtractTimestampTest {
         final HashMap<Object, Object> valueMap = new HashMap<>();
         valueMap.put(FIELD, null);
         final SinkRecord originalRecord = record(null, valueMap);
-        final Throwable e = assertThrows(DataException.class, () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be present and its value can't be null: " + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " field must be present and its value can't be null: " + originalRecord);
     }
 
     @Test
@@ -112,10 +112,9 @@ abstract class ExtractTimestampTest {
                 .field(FIELD, Schema.STRING_SCHEMA)
                 .build();
         final SinkRecord originalRecord = record(null, new Struct(schema).put(FIELD, "aaa"));
-        final Throwable e = assertThrows(DataException.class, () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be INT64 or org.apache.kafka.connect.data.Timestamp: "
-                        + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " field must be INT64 or org.apache.kafka.connect.data.Timestamp: " + originalRecord);
     }
 
     @Test
@@ -123,10 +122,9 @@ abstract class ExtractTimestampTest {
         final HashMap<Object, Object> valueMap = new HashMap<>();
         valueMap.put(FIELD, "aaa");
         final SinkRecord originalRecord = record(null, valueMap);
-        final Throwable e = assertThrows(DataException.class, () -> transformation().apply(originalRecord));
-        assertEquals(FIELD + " field must be INT64 or org.apache.kafka.connect.data.Timestamp: "
-                        + originalRecord,
-                e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " field must be INT64 or org.apache.kafka.connect.data.Timestamp: " + originalRecord);
     }
 
     @ParameterizedTest
@@ -145,7 +143,7 @@ abstract class ExtractTimestampTest {
         final long timestamp = 11363151277L;
         final SinkRecord originalRecord = record(null, new Struct(schema).put(FIELD, timestamp));
         final SinkRecord transformedRecord = transformation().apply(originalRecord);
-        assertEquals(setNewTimestamp(originalRecord, timestamp), transformedRecord);
+        assertThat(transformedRecord).isEqualTo(setNewTimestamp(originalRecord, timestamp));
     }
 
     @ParameterizedTest
@@ -164,7 +162,7 @@ abstract class ExtractTimestampTest {
         final long timestamp = 11363151277L;
         final SinkRecord originalRecord = record(null, new Struct(schema).put(FIELD, timestamp));
         final SinkRecord transformedRecord = transformation().apply(originalRecord);
-        assertEquals(setNewTimestamp(originalRecord, timestamp), transformedRecord);
+        assertThat(transformedRecord).isEqualTo(setNewTimestamp(originalRecord, timestamp));
     }
 
     @ParameterizedTest
@@ -186,7 +184,7 @@ abstract class ExtractTimestampTest {
         props.put(ExtractTimestampConfig.EPOCH_RESOLUTION_CONFIG, tsResolution.resolution());
         final SinkRecord originalRecord = record(null, new Struct(schema).put(FIELD, timestamp));
         final SinkRecord transformedRecord = transformation(props).apply(originalRecord);
-        assertEquals(setNewTimestamp(originalRecord, instance.toEpochMilli()), transformedRecord);
+        assertThat(transformedRecord).isEqualTo(setNewTimestamp(originalRecord, instance.toEpochMilli()));
     }
 
     @ParameterizedTest
@@ -207,7 +205,7 @@ abstract class ExtractTimestampTest {
         }
         final SinkRecord originalRecord = record(null, Map.of(FIELD, timestamp));
         final var transformedRecord = transformation(props).apply(originalRecord);
-        assertEquals(setNewTimestamp(originalRecord, instance.toEpochMilli()), transformedRecord);
+        assertThat(transformedRecord).isEqualTo(setNewTimestamp(originalRecord, instance.toEpochMilli()));
     }
 
     @ParameterizedTest
@@ -225,7 +223,7 @@ abstract class ExtractTimestampTest {
         props.put(ExtractTimestampConfig.EPOCH_RESOLUTION_CONFIG, tsResolution.resolution());
         final SinkRecord originalRecord = record(null, new Struct(schema).put(FIELD, Date.from(instant)));
         final SinkRecord transformedRecord = transformation(props).apply(originalRecord);
-        assertEquals(setNewTimestamp(originalRecord, instant.toEpochMilli()), transformedRecord);
+        assertThat(transformedRecord).isEqualTo(setNewTimestamp(originalRecord, instant.toEpochMilli()));
     }
 
     @ParameterizedTest
@@ -240,7 +238,7 @@ abstract class ExtractTimestampTest {
         props.put(ExtractTimestampConfig.EPOCH_RESOLUTION_CONFIG, tsResolution.resolution());
         final SinkRecord originalRecord = record(null, Map.of(FIELD, Date.from(instant)));
         final SinkRecord transformedRecord = transformation(props).apply(originalRecord);
-        assertEquals(setNewTimestamp(originalRecord, instant.toEpochMilli()), transformedRecord);
+        assertThat(transformedRecord).isEqualTo(setNewTimestamp(originalRecord, instant.toEpochMilli()));
     }
 
     private ExtractTimestamp<SinkRecord> transformation() {

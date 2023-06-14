@@ -23,23 +23,17 @@ import org.apache.kafka.common.config.ConfigException;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.shaded.com.google.common.collect.ImmutableMap;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 final class TombstoneHandlerConfigTest {
 
     @Test
     final void failOnUnknownBehaviorName() {
-        final Throwable t =
-            assertThrows(
-                ConfigException.class,
-                () -> new TombstoneHandlerConfig(newBehaviorProps("asdasdsadas"))
-            );
-        assertEquals(
-            "Invalid value asdasdsadas for configuration behavior: "
-                + "Unsupported behavior name: asdasdsadas. Supported are: drop_silent,drop_warn,fail",
-            t.getMessage()
-        );
+        assertThatThrownBy(() -> new TombstoneHandlerConfig(newBehaviorProps("asdasdsadas")))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value asdasdsadas for configuration behavior: "
+                + "Unsupported behavior name: asdasdsadas. Supported are: drop_silent,drop_warn,fail");
     }
 
     @Test
@@ -51,7 +45,7 @@ final class TombstoneHandlerConfigTest {
                     TombstoneHandlerConfig.Behavior.DROP_SILENT.name()
                 )
             );
-        assertEquals(TombstoneHandlerConfig.Behavior.DROP_SILENT, c.getBehavior());
+        assertThat(c.getBehavior()).isEqualTo(TombstoneHandlerConfig.Behavior.DROP_SILENT);
 
         c =
             new TombstoneHandlerConfig(
@@ -59,7 +53,7 @@ final class TombstoneHandlerConfigTest {
                     TombstoneHandlerConfig.Behavior.FAIL.name().toLowerCase()
                 )
             );
-        assertEquals(TombstoneHandlerConfig.Behavior.FAIL, c.getBehavior());
+        assertThat(c.getBehavior()).isEqualTo(TombstoneHandlerConfig.Behavior.FAIL);
 
         c =
             new TombstoneHandlerConfig(
@@ -67,16 +61,14 @@ final class TombstoneHandlerConfigTest {
                     "Drop_WArn"
                 )
             );
-        assertEquals(TombstoneHandlerConfig.Behavior.DROP_WARN, c.getBehavior());
+        assertThat(c.getBehavior()).isEqualTo(TombstoneHandlerConfig.Behavior.DROP_WARN);
     }
 
     @Test
     final void failOnEmptyBehaviorName() {
-        final Throwable t = assertThrows(
-            ConfigException.class,
-            () -> new TombstoneHandlerConfig(newBehaviorProps(""))
-        );
-        assertEquals("Invalid value  for configuration behavior: String must be non-empty", t.getMessage());
+        assertThatThrownBy(() -> new TombstoneHandlerConfig(newBehaviorProps("")))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value  for configuration behavior: String must be non-empty");
     }
 
     private Map<String, String> newBehaviorProps(final String bv) {

@@ -33,9 +33,9 @@ import static io.aiven.kafka.connect.transforms.ConcatFieldsConfig.DELIMITER_CON
 import static io.aiven.kafka.connect.transforms.ConcatFieldsConfig.FIELD_NAMES_CONFIG;
 import static io.aiven.kafka.connect.transforms.ConcatFieldsConfig.FIELD_REPLACE_MISSING_CONFIG;
 import static io.aiven.kafka.connect.transforms.ConcatFieldsConfig.OUTPUT_FIELD_NAME_CONFIG;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertEquals;
 
 abstract class ConcatFieldsTest {
     private static final String FIELD = "combined";
@@ -65,30 +65,27 @@ abstract class ConcatFieldsTest {
 
     @Test
     void recordNotStructOrMap() {
-        final SinkRecord originalRecord = record(SchemaBuilder.INT8_SCHEMA, (byte) 123);
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals("Value type must be STRUCT or MAP: " + originalRecord,
-            e.getMessage());
+        final SinkRecord originalRecord = record(Schema.INT8_SCHEMA, (byte) 123);
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage("Value type must be STRUCT or MAP: " + originalRecord);
     }
 
     @Test
     void recordStructNull() {
         final Schema schema = SchemaBuilder.struct().schema();
         final SinkRecord originalRecord = record(schema, null);
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals(dataPlace() + " Value can't be null: " + originalRecord,
-            e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(dataPlace() + " Value can't be null: " + originalRecord);
     }
 
     @Test
     void recordMapNull() {
         final SinkRecord originalRecord = record(null, null);
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals(dataPlace() + " Value can't be null: " + originalRecord,
-            e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(dataPlace() + " Value can't be null: " + originalRecord);
     }
 
     @Test
@@ -100,9 +97,9 @@ abstract class ConcatFieldsTest {
             .field(AGE_FIELD, Schema.OPTIONAL_INT64_SCHEMA)
             .build();
         final SinkRecord originalRecord = record(schema, new Struct(schema));
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals("Invalid value: null used for required field: \"bar\", schema type: STRING", e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage("Invalid value: null used for required field: \"bar\", schema type: STRING");
     }
 
     @Test
@@ -114,26 +111,27 @@ abstract class ConcatFieldsTest {
             .field(AGE_FIELD, Schema.OPTIONAL_INT64_SCHEMA)
             .build();
         final SinkRecord originalRecord = record(null, new Struct(schema));
-        final Throwable e = assertThrows(DataException.class,
-            () -> transformation().apply(originalRecord));
-        assertEquals("Invalid value: null used for required field: \"bar\", schema type: STRING", e.getMessage());
+        assertThatThrownBy(() -> transformation().apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage("Invalid value: null used for required field: \"bar\", schema type: STRING");
     }
 
     @Test
     void mapWithMissingField() {
         final SinkRecord originalRecord = record(null, new HashMap<>());
-        assertDoesNotThrow(() -> transformation().apply(originalRecord),
-            FIELD + " field must be present and its value can't be null: " + originalRecord);
+        assertThatNoException()
+            .describedAs(FIELD + " field must be present and its value can't be null: " + originalRecord)
+            .isThrownBy(() -> transformation().apply(originalRecord));
     }
 
     @Test
     void mapWithoutSchema() {
-        final HashMap<Object, Object> valueMap = new HashMap<>();
+        final Map<Object, Object> valueMap = new HashMap<>();
         valueMap.put(BAR_FIELD, BAR_VALUE);
         valueMap.put(TEST_FIELD, TEST_VALUE);
         valueMap.put(AGE_FIELD, AGE_VALUE);
         valueMap.put(FOO_FIELD, FOO_VALUE);
-        final HashMap<Object, Object> newValueMap = new HashMap<>();
+        final Map<Object, Object> newValueMap = new HashMap<>();
         newValueMap.put(BAR_FIELD, BAR_VALUE);
         newValueMap.put(FIELD, TEST_VALUE + "-" + FOO_VALUE + "-" + BAR_VALUE + "-" + AGE_VALUE);
         newValueMap.put(TEST_FIELD, TEST_VALUE);

@@ -18,22 +18,20 @@ package io.aiven.kafka.connect.transforms;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class ExtractTopicConfigTest {
     @Test
     void defaults() {
         final Map<String, String> props = new HashMap<>();
         final ExtractTopicConfig config = new ExtractTopicConfig(props);
-        assertEquals(Optional.empty(), config.fieldName());
-        assertFalse(config.skipMissingOrNull());
+        assertThat(config.fieldName()).isNotPresent();
+        assertThat(config.skipMissingOrNull()).isFalse();
     }
 
     @ParameterizedTest
@@ -42,7 +40,7 @@ class ExtractTopicConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put("skip.missing.or.null", Boolean.toString(skipMissingOrNull));
         final ExtractTopicConfig config = new ExtractTopicConfig(props);
-        assertEquals(skipMissingOrNull, config.skipMissingOrNull());
+        assertThat(config.skipMissingOrNull()).isEqualTo(skipMissingOrNull);
     }
 
     @Test
@@ -50,7 +48,7 @@ class ExtractTopicConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put("field.name", "");
         final ExtractTopicConfig config = new ExtractTopicConfig(props);
-        assertEquals(Optional.empty(), config.fieldName());
+        assertThat(config.fieldName()).isNotPresent();
     }
 
     @Test
@@ -58,6 +56,6 @@ class ExtractTopicConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put("field.name", "test");
         final ExtractTopicConfig config = new ExtractTopicConfig(props);
-        assertEquals(Optional.of("test"), config.fieldName());
+        assertThat(config.fieldName()).hasValue("test");
     }
 }
