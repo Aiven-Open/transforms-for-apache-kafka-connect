@@ -30,11 +30,7 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.transforms.Transformation;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transformation<R> {
-    private static final Logger log = LoggerFactory.getLogger(ExtractTopic.class);
 
     private static final List<Schema.Type> SUPPORTED_TYPES_TO_CONVERT_FROM = Arrays.asList(
         Schema.Type.INT8,
