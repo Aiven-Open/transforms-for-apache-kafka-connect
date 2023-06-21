@@ -40,17 +40,17 @@ abstract class ExtractTopicTest {
     private static final String NEW_TOPIC = "new_topic";
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
+    @ValueSource(booleans = {true, false})
     void nullSchema(final boolean skipMissingOrNull) {
         final SinkRecord originalRecord = record(null, null);
         assertThatThrownBy(() -> transformation(FIELD, skipMissingOrNull).apply(originalRecord))
             .isInstanceOf(DataException.class)
-            .hasMessage(dataPlace() + " schema can't be null: " + originalRecord);
+            .hasMessage(dataPlace() + " can't be null if field name is specified: " + originalRecord);
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void noFieldName_UnsupportedType(final boolean skipMissingOrNull) {
+    @ValueSource(booleans = {true, false})
+    void noFieldName_UnsupportedSchemaType(final boolean skipMissingOrNull) {
         final Schema schema = SchemaBuilder.struct().build();
         final SinkRecord originalRecord = record(schema, new Struct(schema));
         assertThatThrownBy(() -> transformation(null, skipMissingOrNull).apply(originalRecord))
@@ -61,8 +61,20 @@ abstract class ExtractTopicTest {
     }
 
     @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void noFieldName_UnsupportedValueType(final boolean skipMissingOrNull) {
+        final SinkRecord originalRecord = record(null, new HashMap<String, Object>());
+        assertThatThrownBy(() -> transformation(null, skipMissingOrNull).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage("type in " + dataPlace() + " {} must be "
+                + "[class java.lang.Byte, class java.lang.Short, class java.lang.Integer, "
+                + "class java.lang.Long, class java.lang.Double, class java.lang.Float, "
+                + "class java.lang.Boolean, class java.lang.String]: " + originalRecord);
+    }
+
+    @ParameterizedTest
     @NullAndEmptySource
-    void noFieldName_NullOrEmptyValue_NoSkip(final String value) {
+    void noFieldName_NullOrEmptyValue_NoSkip_WithSchema(final String value) {
         final Schema schema = Schema.STRING_SCHEMA;
         final SinkRecord originalRecord = record(schema, value);
         assertThatThrownBy(() -> transformation(null, false).apply(originalRecord))
@@ -72,40 +84,60 @@ abstract class ExtractTopicTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    void noFieldName_NullOrEmptyValue_Skip(final String value) {
+    void noFieldName_NullOrEmptyValue_NoSkip_Schemaless(final String value) {
+        final SinkRecord originalRecord = record(null, value);
+        assertThatThrownBy(() -> transformation(null, false).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(dataPlace() + " can't be null or empty: " + originalRecord);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    void noFieldName_NullOrEmptyValue_Skip_WithSchema(final String value) {
         final Schema schema = Schema.STRING_SCHEMA;
         final SinkRecord originalRecord = record(schema, value);
         final SinkRecord result = transformation(null, true).apply(originalRecord);
         assertThat(result).isEqualTo(originalRecord);
     }
 
-    @Test
-    void noFieldName_NormalInt64Value() {
-        final Schema schema = Schema.INT64_SCHEMA;
+    @ParameterizedTest
+    @NullAndEmptySource
+    void noFieldName_NullOrEmptyValue_Skip_Schemaless(final String value) {
+        final SinkRecord originalRecord = record(null, value);
+        final SinkRecord result = transformation(null, true).apply(originalRecord);
+        assertThat(result).isEqualTo(originalRecord);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void noFieldName_NormalInt64Value(final boolean withSchema) {
+        final Schema schema = withSchema ? Schema.INT64_SCHEMA : null;
         final SinkRecord originalRecord = record(schema, 123L);
         final SinkRecord result = transformation(null, false).apply(originalRecord);
         assertThat(result).isEqualTo(setNewTopic(originalRecord, "123"));
     }
 
-    @Test
-    void noFieldName_NormalBooleanValue() {
-        final Schema schema = Schema.BOOLEAN_SCHEMA;
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void noFieldName_NormalBooleanValue(final boolean withSchema) {
+        final Schema schema = withSchema ? Schema.BOOLEAN_SCHEMA : null;
         final SinkRecord originalRecord = record(schema, false);
         final SinkRecord result = transformation(null, false).apply(originalRecord);
         assertThat(result).isEqualTo(setNewTopic(originalRecord, "false"));
     }
 
-    @Test
-    void noFieldName_NormalStringValue() {
-        final Schema schema = Schema.STRING_SCHEMA;
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void noFieldName_NormalStringValue(final boolean withSchema) {
+        final Schema schema = withSchema ? Schema.STRING_SCHEMA : null;
         final SinkRecord originalRecord = record(schema, NEW_TOPIC);
         final SinkRecord result = transformation(null, false).apply(originalRecord);
         assertThat(result).isEqualTo(setNewTopic(originalRecord, NEW_TOPIC));
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void fieldName_NonStruct(final boolean skipMissingOrNull) {
+    @ValueSource(booleans = {true, false})
+    void fieldName_WithSchema_NonStruct(final boolean skipMissingOrNull) {
         final SinkRecord originalRecord = record(Schema.INT8_SCHEMA, "some");
         assertThatThrownBy(() -> transformation(FIELD, skipMissingOrNull).apply(originalRecord))
             .isInstanceOf(DataException.class)
@@ -113,8 +145,17 @@ abstract class ExtractTopicTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void fieldName_NullStruct(final boolean skipMissingOrNull) {
+    @ValueSource(booleans = {true, false})
+    void fieldName_Schemaless_NonMap(final boolean skipMissingOrNull) {
+        final SinkRecord originalRecord = record(null, "some");
+        assertThatThrownBy(() -> transformation(FIELD, skipMissingOrNull).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(dataPlace() + " type must be Map if field name is specified: " + originalRecord);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void fieldName_WithSchema_NullStruct(final boolean skipMissingOrNull) {
         final Schema schema = SchemaBuilder.struct()
             .field(FIELD, Schema.STRING_SCHEMA)
             .schema();
@@ -125,8 +166,17 @@ abstract class ExtractTopicTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    void fieldName_UnsupportedTypeInField(final boolean skipMissingOrNull) {
+    @ValueSource(booleans = {true, false})
+    void fieldName_Schemaless_NullStruct(final boolean skipMissingOrNull) {
+        final SinkRecord originalRecord = record(null, null);
+        assertThatThrownBy(() -> transformation(FIELD, skipMissingOrNull).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(dataPlace() + " can't be null if field name is specified: " + originalRecord);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void fieldName_WithSchema_UnsupportedSchemaTypeInField(final boolean skipMissingOrNull) {
         final Schema innerSchema = SchemaBuilder.struct().build();
         final Schema schema = SchemaBuilder.struct()
             .field(FIELD, innerSchema)
@@ -140,9 +190,23 @@ abstract class ExtractTopicTest {
     }
 
     @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void fieldName_Schemaless_UnsupportedSchemaTypeInField(final boolean skipMissingOrNull) {
+        final var field = Map.of(FIELD, Map.of());
+        final SinkRecord originalRecord = record(null, field);
+        assertThatThrownBy(() -> transformation(FIELD, skipMissingOrNull).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " type in " + dataPlace()
+                + " " + field + " must be "
+                + "[class java.lang.Byte, class java.lang.Short, class java.lang.Integer, "
+                + "class java.lang.Long, class java.lang.Double, class java.lang.Float, "
+                + "class java.lang.Boolean, class java.lang.String]: " + originalRecord);
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = "missing")
     @NullAndEmptySource
-    void fieldName_NullOrEmptyValue_NoSkip(final String value) {
+    void fieldName_NullOrEmptyValue_NoSkip_WithSchema(final String value) {
         final Schema schema = SchemaBuilder.struct()
             .field(FIELD, Schema.OPTIONAL_STRING_SCHEMA)
             .schema();
@@ -159,7 +223,22 @@ abstract class ExtractTopicTest {
     @ParameterizedTest
     @ValueSource(strings = "missing")
     @NullAndEmptySource
-    void fieldName_NullOrEmptyValueOrMissingField_Skip(final String value) {
+    void fieldName_NullOrEmptyValue_NoSkip_Schemaless(final String value) {
+        final Map<String, Object> valueMap = new HashMap<>();
+        valueMap.put("another", "value");
+        if (!"missing".equals(value)) {
+            valueMap.put(FIELD, value);
+        }
+        final SinkRecord originalRecord = record(null, valueMap);
+        assertThatThrownBy(() -> transformation(FIELD, false).apply(originalRecord))
+            .isInstanceOf(DataException.class)
+            .hasMessage(FIELD + " in " + dataPlace() + " can't be null or empty: " + originalRecord);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = "missing")
+    @NullAndEmptySource
+    void fieldName_NullOrEmptyValueOrMissingField_Skip_WithSchema(final String value) {
         final Schema schema = SchemaBuilder.struct()
             .field(FIELD, Schema.OPTIONAL_STRING_SCHEMA)
             .schema();
@@ -168,6 +247,20 @@ abstract class ExtractTopicTest {
             struct.put(FIELD, value);
         }
         final SinkRecord originalRecord = record(schema, struct);
+        final SinkRecord result = transformation(FIELD, true).apply(originalRecord);
+        assertThat(result).isEqualTo(originalRecord);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = "missing")
+    @NullAndEmptySource
+    void fieldName_NullOrEmptyValueOrMissingField_Skip_Schemaless(final String value) {
+        final Map<String, Object> valueMap = new HashMap<>();
+        valueMap.put("another", "value");
+        if (!"missing".equals(value)) {
+            valueMap.put(FIELD, value);
+        }
+        final SinkRecord originalRecord = record(null, valueMap);
         final SinkRecord result = transformation(FIELD, true).apply(originalRecord);
         assertThat(result).isEqualTo(originalRecord);
     }
@@ -189,32 +282,55 @@ abstract class ExtractTopicTest {
         assertThat(result).isEqualTo(originalRecord);
     }
 
-    @Test
-    void fieldName_NormalIntValue() {
-        final Schema schema = SchemaBuilder.struct()
-            .field(FIELD, Schema.INT64_SCHEMA)
-            .schema();
-        final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, 123L));
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void fieldName_NormalIntValue(final boolean withSchema) {
+        final SinkRecord originalRecord;
+        final var fieldValue = 123L;
+        if (withSchema) {
+            final Schema schema = SchemaBuilder.struct()
+                .field(FIELD, Schema.INT64_SCHEMA)
+                .schema();
+            originalRecord = record(schema, new Struct(schema).put(FIELD, fieldValue));
+        } else {
+            final var value = Map.of(FIELD, fieldValue);
+            originalRecord = record(null, value);
+        }
         final SinkRecord result = transformation(FIELD, true).apply(originalRecord);
         assertThat(result).isEqualTo(setNewTopic(originalRecord, "123"));
     }
 
-    @Test
-    void fieldName_NormalBooleanValue() {
-        final Schema schema = SchemaBuilder.struct()
-            .field(FIELD, Schema.BOOLEAN_SCHEMA)
-            .schema();
-        final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, false));
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void fieldName_NormalBooleanValue(final boolean withSchema) {
+        final SinkRecord originalRecord;
+        final var fieldValue = false;
+        if (withSchema) {
+            final Schema schema = SchemaBuilder.struct()
+                .field(FIELD, Schema.BOOLEAN_SCHEMA)
+                .schema();
+            originalRecord = record(schema, new Struct(schema).put(FIELD, fieldValue));
+        } else {
+            final var value = Map.of(FIELD, fieldValue);
+            originalRecord = record(null, value);
+        }
         final SinkRecord result = transformation(FIELD, true).apply(originalRecord);
         assertThat(result).isEqualTo(setNewTopic(originalRecord, "false"));
     }
 
-    @Test
-    void fieldName_NormalStringValue() {
-        final Schema schema = SchemaBuilder.struct()
-            .field(FIELD, Schema.STRING_SCHEMA)
-            .schema();
-        final SinkRecord originalRecord = record(schema, new Struct(schema).put(FIELD, NEW_TOPIC));
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void fieldName_NormalStringValue(final boolean withSchema) {
+        final SinkRecord originalRecord;
+        if (withSchema) {
+            final Schema schema = SchemaBuilder.struct()
+                .field(FIELD, Schema.STRING_SCHEMA)
+                .schema();
+            originalRecord = record(schema, new Struct(schema).put(FIELD, NEW_TOPIC));
+        } else {
+            final var value = Map.of(FIELD, NEW_TOPIC);
+            originalRecord = record(null, value);
+        }
         final SinkRecord result = transformation(FIELD, true).apply(originalRecord);
         assertThat(result).isEqualTo(setNewTopic(originalRecord, NEW_TOPIC));
     }
@@ -256,6 +372,6 @@ abstract class ExtractTopicTest {
             record.value(),
             record.timestamp(),
             record.headers()
-            );
+        );
     }
 }
