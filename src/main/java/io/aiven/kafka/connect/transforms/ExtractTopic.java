@@ -30,13 +30,9 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.transforms.Transformation;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transformation<R> {
-    private static final Logger log = LoggerFactory.getLogger(ExtractTopic.class);
 
-    private static final List<Schema.Type> SUPPORTED_TYPES_TO_CONVERT_FROM = Arrays.asList(
+    private static final List<Schema.Type> SUPPORTED_SCHEMA_TYPES_TO_CONVERT_FROM = Arrays.asList(
         Schema.Type.INT8,
         Schema.Type.INT16,
         Schema.Type.INT32,
@@ -45,6 +41,17 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
         Schema.Type.FLOAT64,
         Schema.Type.BOOLEAN,
         Schema.Type.STRING
+    );
+
+    private static final List<Class<?>> SUPPORTED_VALUE_CLASS_TO_CONVERT_FROM = Arrays.asList(
+        Byte.class,
+        Short.class,
+        Integer.class,
+        Long.class,
+        Double.class,
+        Float.class,
+        Boolean.class,
+        String.class
     );
 
     private ExtractTopicConfig config;
@@ -62,17 +69,25 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
     @Override
     public R apply(final R record) {
         final SchemaAndValue schemaAndValue = getSchemaAndValue(record);
-        if (schemaAndValue.schema() == null) {
-            throw new DataException(dataPlace() + " schema can't be null: " + record);
-        }
 
         final Optional<String> newTopic;
-        if (config.fieldName().isPresent()) {
-            newTopic = getNewTopicForNamedField(
-                record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.fieldName().get());
-        } else {
-            newTopic = getNewTopicWithoutFieldName(
-                record.toString(), schemaAndValue.schema(), schemaAndValue.value());
+
+        if (schemaAndValue.schema() == null) { // schemaless values (Map)
+            if (config.fieldName().isPresent()) {
+                newTopic = topicNameFromNamedFieldSchemaless(
+                    record.toString(), schemaAndValue.value(), config.fieldName().get());
+            } else {
+                newTopic = topicNameWithoutFieldNameSchemaless(
+                    record.toString(), schemaAndValue.value());
+            }
+        } else { // schema-based values (Struct)
+            if (config.fieldName().isPresent()) {
+                newTopic = topicNameFromNamedFieldWithSchema(
+                    record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.fieldName().get());
+            } else {
+                newTopic = topicNameWithoutFieldNameWithSchema(
+                    record.toString(), schemaAndValue.schema(), schemaAndValue.value());
+            }
         }
 
         if (newTopic.isPresent()) {
@@ -95,10 +110,66 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
 
     protected abstract SchemaAndValue getSchemaAndValue(final R record);
 
-    private Optional<String> getNewTopicForNamedField(final String recordStr,
-                                                      final Schema schema,
-                                                      final Object value,
-                                                      final String fieldName) {
+    private Optional<String> topicNameFromNamedFieldSchemaless(final String recordStr,
+                                                               final Object value,
+                                                               final String fieldName) {
+        if (value == null) {
+            throw new DataException(dataPlace() + " can't be null if field name is specified: " + recordStr);
+        }
+
+        if (!(value instanceof Map)) {
+            throw new DataException(dataPlace() + " type must be Map if field name is specified: " + recordStr);
+        }
+
+        @SuppressWarnings("unchecked") final Map<String, Object> valueMap = (Map<String, Object>) value;
+
+        final Optional<String> result = Optional.ofNullable(valueMap.get(fieldName))
+            .map(field -> {
+                if (!SUPPORTED_VALUE_CLASS_TO_CONVERT_FROM.contains(field.getClass())) {
+                    throw new DataException(fieldName + " type in " + dataPlace()
+                        + " " + value
+                        + " must be " + SUPPORTED_VALUE_CLASS_TO_CONVERT_FROM
+                        + ": " + recordStr);
+                }
+                return field;
+            })
+            .map(Object::toString);
+
+        if (result.isPresent() && !result.get().isBlank()) {
+            return result;
+        } else {
+            if (config.skipMissingOrNull()) {
+                return Optional.empty();
+            } else {
+                throw new DataException(fieldName + " in " + dataPlace() + " can't be null or empty: " + recordStr);
+            }
+        }
+    }
+
+    private Optional<String> topicNameWithoutFieldNameSchemaless(final String recordStr,
+                                                                 final Object value) {
+        if (value == null || value.toString().isBlank()) {
+            if (config.skipMissingOrNull()) {
+                return Optional.empty();
+            } else {
+                throw new DataException(dataPlace() + " can't be null or empty: " + recordStr);
+            }
+        }
+
+        if (!SUPPORTED_VALUE_CLASS_TO_CONVERT_FROM.contains(value.getClass())) {
+            throw new DataException("type in " + dataPlace()
+                + " " + value
+                + " must be " + SUPPORTED_VALUE_CLASS_TO_CONVERT_FROM
+                + ": " + recordStr);
+        }
+
+        return Optional.of(value.toString());
+    }
+
+    private Optional<String> topicNameFromNamedFieldWithSchema(final String recordStr,
+                                                               final Schema schema,
+                                                               final Object value,
+                                                               final String fieldName) {
         if (Schema.Type.STRUCT != schema.type()) {
             throw new DataException(dataPlace() + " schema type must be STRUCT if field name is specified: "
                 + recordStr);
@@ -117,9 +188,9 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
             }
         }
 
-        if (!SUPPORTED_TYPES_TO_CONVERT_FROM.contains(field.schema().type())) {
+        if (!SUPPORTED_SCHEMA_TYPES_TO_CONVERT_FROM.contains(field.schema().type())) {
             throw new DataException(fieldName + " schema type in " + dataPlace()
-                + " must be " + SUPPORTED_TYPES_TO_CONVERT_FROM
+                + " must be " + SUPPORTED_SCHEMA_TYPES_TO_CONVERT_FROM
                 + ": " + recordStr);
         }
 
@@ -138,12 +209,12 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
         }
     }
 
-    private Optional<String> getNewTopicWithoutFieldName(final String recordStr,
-                                                         final Schema schema,
-                                                         final Object value) {
-        if (!SUPPORTED_TYPES_TO_CONVERT_FROM.contains(schema.type())) {
+    private Optional<String> topicNameWithoutFieldNameWithSchema(final String recordStr,
+                                                                 final Schema schema,
+                                                                 final Object value) {
+        if (!SUPPORTED_SCHEMA_TYPES_TO_CONVERT_FROM.contains(schema.type())) {
             throw new DataException(dataPlace() + " schema type must be "
-                + SUPPORTED_TYPES_TO_CONVERT_FROM
+                + SUPPORTED_SCHEMA_TYPES_TO_CONVERT_FROM
                 + " if field name is not specified: "
                 + recordStr);
         }
