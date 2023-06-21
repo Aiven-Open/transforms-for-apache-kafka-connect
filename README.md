@@ -4,7 +4,8 @@ A collection of [Single Message Transformations (SMTs)](https://kafka.apache.org
 
 ## Transformations
 
-See [the Kafka documentation](https://kafka.apache.org/documentation/#connect_transforms) for more details about configuring transformations. 
+See [the Kafka documentation](https://kafka.apache.org/documentation/#connect_transforms) for more details about configuring transformations
+or [demo](./demo) on how to install transforms.
 
 ### `ExtractTimestamp`
 
