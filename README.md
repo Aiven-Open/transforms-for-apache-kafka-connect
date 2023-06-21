@@ -188,10 +188,12 @@ transforms.ExtractTopicFromSchemaName.schema.name.topic-map=com.acme.schema.Sche
 
 ```
 And here is an example of this transformation configuration (using :schema.name.regex)
+
 ```properties
 transforms=ExtractTopicFromValueSchema
 transforms.ExtractTopicFromValueSchema.type=io.aiven.kafka.connect.transforms.ExtractTopicFromSchemaName$Value
 transforms.ExtractTopicFromValueSchema.schema.name.regex=(?:[.]|^)([^.]*)$
+```
 
 ## License
 
