@@ -44,7 +44,7 @@ targetCompatibility = JavaVersion.VERSION_11
 ext {
     kafkaVersion = "2.0.1"
     testcontainersVersion = "1.18.3"
-    debeziumVersion = "1.3.0.Final"
+    debeziumVersion = "2.3.0.Final"
 }
 
 distributions {
