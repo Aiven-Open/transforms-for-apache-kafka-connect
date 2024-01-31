@@ -139,6 +139,24 @@ class FilterByFieldValueTest {
     }
 
     @Test
+    void shouldFilterOutRecordNotEqualsToIntId() {
+        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Value<>();
+        filter.configure(Map.of(
+            "field.name", "EventId",
+            "field.value", "4690",
+            "field.value.matches", "true"
+        ));
+
+        assertThat(filter.apply(prepareRecord(() -> "A42", () -> Map.of("EventId", 4663))))
+            .as("Record with id not equal to 'A132' should be filtered out")
+            .isNull();
+        final SourceRecord record = prepareRecord(() -> "A42", () -> Map.of("EventId", 4690));
+        assertThat(filter.apply(record))
+            .as("Record with id equal to '4690' should not be filtered out")
+            .isEqualTo(record);
+    }
+
+    @Test
     void shouldFilterOutMapValueRecordsWithRegex() {
         final FilterByFieldValue<SourceRecord> filterByFieldValue = new FilterByFieldValue.Value<>();
         final Map<String, String> configs = new HashMap<>();
