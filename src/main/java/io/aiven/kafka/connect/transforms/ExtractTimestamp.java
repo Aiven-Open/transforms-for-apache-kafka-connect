@@ -18,8 +18,10 @@ package io.aiven.kafka.connect.transforms;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.SchemaAndValue;
@@ -44,30 +46,32 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
     @Override
     public R apply(final R record) {
         final SchemaAndValue schemaAndValue = getSchemaAndValue(record);
-        
+        String fieldName = config.field().getCursor();
         if (schemaAndValue.value() == null) {
             throw new DataException(keyOrValue() + " can't be null: " + record);
         }
 
-        final Object fieldValue;
+        final Optional<Object> fieldValueOpt;
         if (schemaAndValue.value() instanceof Struct) {
             final Struct struct = (Struct) schemaAndValue.value();
-            if (struct.schema().field(config.fieldName()) == null) {
-                throw new DataException(config.fieldName() + " field must be present and its value can't be null: "
+            if (config.field().read(struct.schema()) == null) {
+                throw new DataException(fieldName + " field must be present and its value can't be null: "
                     + record);
             }
-            fieldValue = struct.get(config.fieldName());
+            fieldValueOpt = config.field().read(struct);
         } else if (schemaAndValue.value() instanceof Map) {
             final Map<?, ?> map = (Map<?, ?>) schemaAndValue.value();
-            fieldValue = map.get(config.fieldName());
+            fieldValueOpt = config.field().read(map);
         } else {
             throw new DataException(keyOrValue() + " type must be STRUCT or MAP: " + record);
         }
 
-        if (fieldValue == null) {
-            throw new DataException(config.fieldName() + " field must be present and its value can't be null: "
+        if (fieldValueOpt.isEmpty()) {
+            throw new DataException(fieldName + " field must be present and its value can't be null: "
                 + record);
         }
+
+        Object fieldValue = fieldValueOpt.orElse(null);
 
         final long newTimestamp;
         if (fieldValue instanceof Long) {
@@ -81,7 +85,7 @@ public abstract class ExtractTimestamp<R extends ConnectRecord<R>> implements Tr
             final var dateFieldValue = (Date) fieldValue;
             newTimestamp = dateFieldValue.getTime();
         } else {
-            throw new DataException(config.fieldName()
+            throw new DataException(fieldName
                 + " field must be INT64 or org.apache.kafka.connect.data.Timestamp: "
                 + record);
         }

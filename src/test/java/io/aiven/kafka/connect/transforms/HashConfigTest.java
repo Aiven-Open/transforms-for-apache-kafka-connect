@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.transforms;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
 import org.apache.kafka.common.config.ConfigException;
 
 import org.junit.jupiter.api.Test;
@@ -77,7 +78,7 @@ class HashConfigTest {
         props.put("field.name", "");
         props.put("function", "sha256");
         final HashConfig config = new HashConfig(props);
-        assertThat(config.fieldName()).isNotPresent();
+        assertThat(config.field()).isNotPresent();
     }
 
     @Test
@@ -86,7 +87,7 @@ class HashConfigTest {
         props.put("field.name", "test");
         props.put("function", "sha256");
         final HashConfig config = new HashConfig(props);
-        assertThat(config.fieldName()).hasValue("test");
+        assertThat(config.field().map(CursorField::getCursor)).hasValue("test");
         assertThat(config.hashFunction()).isEqualTo(HashConfig.HashFunction.SHA256);
     }
 }

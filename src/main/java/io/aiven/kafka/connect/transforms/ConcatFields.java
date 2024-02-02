@@ -77,13 +77,10 @@ public abstract class ConcatFields<R extends ConnectRecord<R>> implements Transf
             struct.schema().fields().forEach(field -> {
                 newStruct.put(field.name(), struct.get(field));
             });
-            config.fieldNames().forEach(field -> {
+            config.fields().forEach(field -> {
                 try {
-                    if (struct.get(field) == null) {
-                        outputValue.add(config.fieldReplaceMissing());
-                    } else {
-                        outputValue.add(struct.get(field).toString());
-                    }
+                    String value = field.readAsString(struct).orElse(config.fieldReplaceMissing());
+                    outputValue.add(value);
                 } catch (final DataException e) {
                     log.debug("{} is missing, concat will use {}", field, config.fieldReplaceMissing());
                     outputValue.add(config.fieldReplaceMissing());
@@ -94,12 +91,9 @@ public abstract class ConcatFields<R extends ConnectRecord<R>> implements Transf
         } else if (schemaAndValue.value() instanceof Map) {
             final Map newValue = new HashMap<>((Map<?, ?>) schemaAndValue.value());
             final StringJoiner outputValue = new StringJoiner(config.delimiter());
-            config.fieldNames().forEach(field -> {
-                if (newValue.get(field) == null) {
-                    outputValue.add(config.fieldReplaceMissing());
-                } else {
-                    outputValue.add(newValue.get(field).toString());
-                }
+            config.fields().forEach(field -> {
+                String value = field.readAsString(newValue).orElse(config.fieldReplaceMissing());
+                outputValue.add(value);
             });
             newValue.put(config.outputFieldName(), outputValue.toString());
 

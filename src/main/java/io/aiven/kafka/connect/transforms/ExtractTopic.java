@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Field;
@@ -73,17 +74,17 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
         final Optional<String> newTopic;
 
         if (schemaAndValue.schema() == null) { // schemaless values (Map)
-            if (config.fieldName().isPresent()) {
+            if (config.field().isPresent()) {
                 newTopic = topicNameFromNamedFieldSchemaless(
-                    record.toString(), schemaAndValue.value(), config.fieldName().get());
+                    record.toString(), schemaAndValue.value(), config.field().get());
             } else {
                 newTopic = topicNameWithoutFieldNameSchemaless(
                     record.toString(), schemaAndValue.value());
             }
         } else { // schema-based values (Struct)
-            if (config.fieldName().isPresent()) {
+            if (config.field().isPresent()) {
                 newTopic = topicNameFromNamedFieldWithSchema(
-                    record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.fieldName().get());
+                    record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.field().get());
             } else {
                 newTopic = topicNameWithoutFieldNameWithSchema(
                     record.toString(), schemaAndValue.schema(), schemaAndValue.value());
@@ -112,7 +113,7 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
 
     private Optional<String> topicNameFromNamedFieldSchemaless(final String recordStr,
                                                                final Object value,
-                                                               final String fieldName) {
+                                                               final CursorField field) {
         if (value == null) {
             throw new DataException(dataPlace() + " can't be null if field name is specified: " + recordStr);
         }
@@ -123,15 +124,15 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
 
         @SuppressWarnings("unchecked") final Map<String, Object> valueMap = (Map<String, Object>) value;
 
-        final Optional<String> result = Optional.ofNullable(valueMap.get(fieldName))
-            .map(field -> {
-                if (!SUPPORTED_VALUE_CLASS_TO_CONVERT_FROM.contains(field.getClass())) {
-                    throw new DataException(fieldName + " type in " + dataPlace()
+        final Optional<String> result = field.read(valueMap)
+            .map(fieldValue -> {
+                if (!SUPPORTED_VALUE_CLASS_TO_CONVERT_FROM.contains(fieldValue.getClass())) {
+                    throw new DataException(field.getCursor() + " type in " + dataPlace()
                         + " " + value
                         + " must be " + SUPPORTED_VALUE_CLASS_TO_CONVERT_FROM
                         + ": " + recordStr);
                 }
-                return field;
+                return fieldValue;
             })
             .map(Object::toString);
 
@@ -141,7 +142,7 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
             if (config.skipMissingOrNull()) {
                 return Optional.empty();
             } else {
-                throw new DataException(fieldName + " in " + dataPlace() + " can't be null or empty: " + recordStr);
+                throw new DataException(field.getCursor() + " in " + dataPlace() + " can't be null or empty: " + recordStr);
             }
         }
     }
@@ -169,7 +170,7 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
     private Optional<String> topicNameFromNamedFieldWithSchema(final String recordStr,
                                                                final Schema schema,
                                                                final Object value,
-                                                               final String fieldName) {
+                                                               final CursorField field) {
         if (Schema.Type.STRUCT != schema.type()) {
             throw new DataException(dataPlace() + " schema type must be STRUCT if field name is specified: "
                 + recordStr);
@@ -179,32 +180,31 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
             throw new DataException(dataPlace() + " can't be null if field name is specified: " + recordStr);
         }
 
-        final Field field = schema.field(fieldName);
-        if (field == null) {
+        final Field fieldSchema = field.read(schema);
+        if (fieldSchema == null) {
             if (config.skipMissingOrNull()) {
                 return Optional.empty();
             } else {
-                throw new DataException(fieldName + " in " + dataPlace() + " schema can't be missing: " + recordStr);
+                throw new DataException(field.getCursor() + " in " + dataPlace() + " schema can't be missing: " + recordStr);
             }
         }
 
-        if (!SUPPORTED_SCHEMA_TYPES_TO_CONVERT_FROM.contains(field.schema().type())) {
-            throw new DataException(fieldName + " schema type in " + dataPlace()
+        if (!SUPPORTED_SCHEMA_TYPES_TO_CONVERT_FROM.contains(fieldSchema.schema().type())) {
+            throw new DataException(field.getCursor() + " schema type in " + dataPlace()
                 + " must be " + SUPPORTED_SCHEMA_TYPES_TO_CONVERT_FROM
                 + ": " + recordStr);
         }
 
         final Struct struct = (Struct) value;
 
-        final Optional<String> result = Optional.ofNullable(struct.get(fieldName))
-            .map(Object::toString);
+        final Optional<String> result = field.readAsString(struct);
         if (result.isPresent() && !result.get().equals("")) {
             return result;
         } else {
             if (config.skipMissingOrNull()) {
                 return Optional.empty();
             } else {
-                throw new DataException(fieldName + " in " + dataPlace() + " can't be null or empty: " + recordStr);
+                throw new DataException(field.getCursor() + " in " + dataPlace() + " can't be null or empty: " + recordStr);
             }
         }
     }
