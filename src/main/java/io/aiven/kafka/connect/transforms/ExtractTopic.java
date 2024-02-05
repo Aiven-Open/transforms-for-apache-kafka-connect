@@ -92,8 +92,10 @@ public abstract class ExtractTopic<R extends ConnectRecord<R>> implements Transf
         }
 
         if (newTopic.isPresent()) {
+            String appended = record.topic() + config.appendDelimiter() + newTopic.get();
+            String newName = config.appendToExisting() ? appended : newTopic.get();
             return record.newRecord(
-                newTopic.get(),
+                newName,
                 record.kafkaPartition(),
                 record.keySchema(),
                 record.key(),
