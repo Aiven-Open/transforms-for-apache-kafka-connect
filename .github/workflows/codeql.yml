@@ -28,7 +28,7 @@ permissions:
 jobs:
   analyze:
     name: Analyze
-    runs-on: ubuntu-latest
+    runs-on: atc-ubuntu-22.04
 
     strategy:
       fail-fast: false

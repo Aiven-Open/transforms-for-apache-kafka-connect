@@ -9,8 +9,8 @@ jobs:
   build:
     strategy:
       matrix:
-        java-version: [ 11, 17 ]
-        runs-on: [ ubuntu-latest ]
+        java-version: [ 17 ]
+        runs-on: [ atc-ubuntu-22.04 ]
     name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
     runs-on: ${{ matrix.runs-on }}
     steps:
