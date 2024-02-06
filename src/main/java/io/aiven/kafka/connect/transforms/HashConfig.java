@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.transforms;
 import java.util.Map;
 import java.util.Optional;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
@@ -87,12 +88,12 @@ class HashConfig extends AbstractConfig {
         }
     }
 
-    Optional<String> fieldName() {
+    Optional<CursorField> field() {
         final String rawFieldName = getString(FIELD_NAME_CONFIG);
         if (null == rawFieldName || "".equals(rawFieldName)) {
             return Optional.empty();
         }
-        return Optional.of(rawFieldName);
+        return Optional.of(new CursorField(rawFieldName));
     }
 
     boolean skipMissingOrNull() {

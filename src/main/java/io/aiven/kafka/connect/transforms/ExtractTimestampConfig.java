@@ -18,8 +18,10 @@ package io.aiven.kafka.connect.transforms;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
@@ -100,8 +102,8 @@ final class ExtractTimestampConfig extends AbstractConfig {
                         EPOCH_RESOLUTION_DOC);
     }
 
-    final String fieldName() {
-        return getString(FIELD_NAME_CONFIG);
+    final CursorField field() {
+        return new CursorField(getString(FIELD_NAME_CONFIG));
     }
 
     final TimestampResolution timestampResolution() {

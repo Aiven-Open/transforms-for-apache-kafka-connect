@@ -17,6 +17,7 @@
 package io.aiven.kafka.connect.debezium.converters;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 import java.util.Properties;
 
 import org.apache.kafka.connect.data.SchemaBuilder;
@@ -51,9 +52,9 @@ public class MoneyConverter implements CustomConverter<SchemaBuilder, Relational
                 }
                 if (data instanceof BigDecimal) {
                     // Expected type
-                    return String.format("%.2f", data);
+                    return String.format(Locale.ROOT, "%.2f", data);
                 } else if (data instanceof Number) {
-                    return String.format("%.2f", ((Number) data).floatValue());
+                    return String.format(Locale.ROOT, "%.2f", ((Number) data).floatValue());
                 } else {
                     throw new IllegalArgumentException("Money type should have BigDecimal type");
                 }

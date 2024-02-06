@@ -49,7 +49,7 @@ class ExtractTimestampConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put("field.name", "test");
         final ExtractTimestampConfig config = new ExtractTimestampConfig(props);
-        assertThat(config.fieldName()).isEqualTo("test");
+        assertThat(config.field().getCursor()).isEqualTo("test");
     }
 
     @Test
