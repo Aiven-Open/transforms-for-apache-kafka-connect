@@ -24,9 +24,8 @@ import java.util.Map;
 final class DropValueIfHeaderSetConfig extends AbstractConfig {
 
     public static final String HEADER_KEY_CONFIG = "header.key";
-    private static final String HEADER_KEY_DOC = "The value of the header with this key is to be checked against the configured string value.";
-
     public static final String HEADER_VALUE_CONFIG = "header.string_value";
+    private static final String HEADER_KEY_DOC = "The value of the header with this key is to be checked against the configured string value.";
     private static final String HEADER_VALUE_DOC = "The value of the header must match this provided string value in order for the record to be dropped." +
             "If the value does not match (because the value is not a string, the header is not set or the two strings a different)," +
             "the record will not be modified.";

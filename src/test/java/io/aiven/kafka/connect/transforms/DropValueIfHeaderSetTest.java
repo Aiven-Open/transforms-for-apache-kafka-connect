@@ -26,15 +26,13 @@ import java.util.Map;
 
 import static io.aiven.kafka.connect.transforms.DropValueIfHeaderSetConfig.HEADER_KEY_CONFIG;
 import static io.aiven.kafka.connect.transforms.DropValueIfHeaderSetConfig.HEADER_VALUE_CONFIG;
-import static java.time.LocalTime.now;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 class DropValueIfHeaderSetTest {
 
 
     DropValueIfHeaderSet<SourceRecord> underTest;
+
     @BeforeEach
     void setup() {
         underTest = new DropValueIfHeaderSet<>();
@@ -57,7 +55,7 @@ class DropValueIfHeaderSetTest {
                 "dummy value",
                 0L,
                 unrelatedHeaders
-                );
+        );
 
         final var actual = underTest.apply(record);
 
