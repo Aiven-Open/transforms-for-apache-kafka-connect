@@ -39,30 +39,19 @@ public class DropValueIfHeaderSet<R extends ConnectRecord<R>> implements Transfo
     @Override
     public R apply(final R record) {
         final var header = record.headers().lastWithName(config.headerKey());
-        if (header != null && header.value() instanceof String) {
-            final var headerValue = (String) header.value();
-            if (config.headerValue().equals(headerValue)) {
-                return record.newRecord(
-                        record.topic(),
-                        record.kafkaPartition(),
-                        record.keySchema(),
-                        record.key(),
-                        null,
-                        null,
-                        record.timestamp()
-                );
-            }
+        if (header != null && config.headerValue().equals(header.value())) {
+            return record.newRecord(
+                    record.topic(),
+                    record.kafkaPartition(),
+                    record.keySchema(),
+                    record.key(),
+                    null,
+                    null,
+                    record.timestamp()
+            );
         }
 
-        return record.newRecord(
-                record.topic(),
-                record.kafkaPartition(),
-                record.keySchema(),
-                record.key(),
-                record.valueSchema(),
-                record.value(),
-                record.timestamp()
-        );
+        return record;
     }
 
     @Override
