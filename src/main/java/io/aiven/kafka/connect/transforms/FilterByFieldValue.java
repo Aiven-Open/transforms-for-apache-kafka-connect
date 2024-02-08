@@ -136,21 +136,18 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
     @SuppressWarnings("unchecked")
     private R applySchemaless(final R record) {
         if (field.isEmpty()) {
-            final SchemaAndValue schemaAndValue = getSchemalessFieldValue(operatingValue(record)).orElse(null);
+            final SchemaAndValue schemaAndValue = getSchemalessFieldValue(operatingValue(record));
             return filterCondition.test(schemaAndValue) ? record : null;
         } else {
             final Map<String, Object> map = (Map<String, Object>) operatingValue(record);
             Object value = field.get().read(map).orElse(null);
-            final SchemaAndValue schemaAndValue = getSchemalessFieldValue(value).orElse(null);
+            final SchemaAndValue schemaAndValue = getSchemalessFieldValue(value);
             return filterCondition.test(schemaAndValue) ? record : null;
         }
     }
 
-    private Optional<SchemaAndValue> getSchemalessFieldValue(final Object fieldValue) {
-        if (fieldValue == null) {
-            return Optional.empty();
-        }
-        return Optional.of(new SchemaAndValue(Values.inferSchema(fieldValue), fieldValue));
+    private SchemaAndValue getSchemalessFieldValue(final Object fieldValue) {
+        return new SchemaAndValue(Values.inferSchema(fieldValue), fieldValue);
     }
 
     @Override
