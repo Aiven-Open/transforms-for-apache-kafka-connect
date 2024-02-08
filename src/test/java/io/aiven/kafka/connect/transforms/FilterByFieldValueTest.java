@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
@@ -31,7 +32,6 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class FilterByFieldValueTest {
-
 
     @Test
     void shouldFilterOutValueRecordsEqualsToReadEvents() {
@@ -82,6 +82,20 @@ class FilterByFieldValueTest {
         assertThat(filter.apply(record))
             .as("Record with id not 'A132' should not be filtered out")
             .isEqualTo(record);
+    }
+
+    @Test
+    void shouldFilterOutNullValues() {
+        final FilterByFieldValue<SourceRecord> filter = new FilterByFieldValue.Value<>();
+        filter.configure(Map.of(
+            "field.name", "id",
+            "field.value.is-null", "true",
+            "field.value.matches", "false"
+        ));
+
+        assertThat(filter.apply(prepareRecord(() -> "A42", () -> Map.of())))
+            .as("Record with id 'A132' should be filtered out")
+            .isNull();
     }
 
     @Test

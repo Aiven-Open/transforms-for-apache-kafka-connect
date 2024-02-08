@@ -41,6 +41,7 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
     private Optional<CursorField> field;
     private Optional<String> fieldExpectedValue;
     private Optional<String> fieldValuePattern;
+    private boolean fieldValueIsNull;
 
     @Override
     public ConfigDef config() {
@@ -56,11 +57,16 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
                 ConfigDef.Type.STRING,
                 null,
                 ConfigDef.Importance.HIGH,
-                "Expected value to match. Either define this, or a regex pattern")
+                "Expected value to match. Either define this, a regex pattern, or if it should check for null")
             .define("field.value.pattern",
                 ConfigDef.Type.STRING,
                 null,
                 ConfigDef.Importance.HIGH,
+                "The pattern to match. Either define this, an expected value, or if it should check for null")
+            .define("field.value.is-null",
+                ConfigDef.Type.BOOLEAN,
+                false,
+                ConfigDef.Importance.MEDIUM,
                 "The pattern to match. Either define this, or an expected value")
             .define("field.value.matches",
                 ConfigDef.Type.BOOLEAN,
@@ -77,23 +83,26 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
                              .map(CursorField::new);
         this.fieldExpectedValue = Optional.ofNullable(config.getString("field.value"));
         this.fieldValuePattern = Optional.ofNullable(config.getString("field.value.pattern"));
+        this.fieldValueIsNull = config.getBoolean("field.value.is-null");
         final boolean expectedValuePresent = fieldExpectedValue.isPresent();
         final boolean regexPatternPresent = fieldValuePattern.map(s -> !s.isEmpty()).orElse(false);
-        if (expectedValuePresent == regexPatternPresent) {
+        if (!(expectedValuePresent ^ regexPatternPresent ^ fieldValueIsNull) || (expectedValuePresent && regexPatternPresent)) {
             throw new ConfigException(
-                "Either field.value or field.value.pattern have to be set to apply filter transform");
+                "Either field.value, field.value.pattern, or field.value.is-null have to be set to apply filter transform");
         }
         final Predicate<SchemaAndValue> matchCondition;
 
         if (expectedValuePresent) {
             final SchemaAndValue expectedSchemaAndValue = Values.parseString(fieldExpectedValue.get());
             matchCondition = schemaAndValue -> expectedSchemaAndValue.value().equals(schemaAndValue.value());
-        } else {
+        } else if (regexPatternPresent) {
             final String pattern = fieldValuePattern.get();
             final Predicate<String> regexPredicate = Pattern.compile(pattern).asPredicate();
             matchCondition = schemaAndValue ->
                 schemaAndValue != null
                     && regexPredicate.test(Values.convertToString(schemaAndValue.schema(), schemaAndValue.value()));
+        } else {
+            matchCondition = schemaAndValue -> schemaAndValue.value() == null;
         }
 
         this.filterCondition = config.getBoolean("field.value.matches")
