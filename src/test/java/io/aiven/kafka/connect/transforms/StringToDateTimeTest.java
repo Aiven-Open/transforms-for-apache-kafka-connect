@@ -38,7 +38,7 @@ public class StringToDateTimeTest {
                 .build();
 
         Struct struct = new Struct(schema);
-        String dateString = "2024-01-01T12:00:00";
+        String dateString = "2024-04-28T13:36:00";
         struct.put("datetimeField", dateString);
 
         when(mockRecord.valueSchema()).thenReturn(schema);
@@ -50,6 +50,6 @@ public class StringToDateTimeTest {
         assertEquals(transformedStruct.schema().field("datetimeField").schema(), org.apache.kafka.connect.data.Timestamp.SCHEMA);
 
         java.util.Date dateValue = (java.util.Date) transformedStruct.get("datetimeField");
-        assertEquals(dateValue.toString(), "2024-01-01T12:00:00");
+        assertEquals(dateValue.toString(), "2024-04-28T13:36:00");
     }
 }
