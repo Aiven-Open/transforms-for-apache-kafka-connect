@@ -59,7 +59,8 @@ public class StringToDateTime<R extends ConnectRecord<R>> implements Transformat
         // Replace the string field with the LocalDateTime converted to java.util.Date (expected by Timestamp schema)
         updatedStruct.put(field, java.sql.Timestamp.valueOf(dateTime));
 
-        return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(), updatedSchema, updatedStruct, record.timestamp());
+        return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(),
+                record.key(), updatedSchema, updatedStruct, record.timestamp());
     }
 
     @Override
