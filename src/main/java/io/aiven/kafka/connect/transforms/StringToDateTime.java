@@ -9,8 +9,13 @@ import org.apache.kafka.connect.errors.DataException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.Map;
 
 public class StringToDateTime<R extends ConnectRecord<R>> implements Transformation<R> {
@@ -19,6 +24,15 @@ public class StringToDateTime<R extends ConnectRecord<R>> implements Transformat
 
     public static final String FIELD_CONFIG = "field";
     private String field;
+
+    public Date StringToDate(SimpleDateFormat formatter, String input) {
+        try {
+            return formatter.parse(input);
+        } catch (ParseException p) {
+            throw new DataException("Could not parse intpu: value (" + input, p);
+        }
+    }
+
     @Override
     public R apply(R record) {
         if (record.valueSchema() == null || !(record.value() instanceof Struct)) {
@@ -38,13 +52,19 @@ public class StringToDateTime<R extends ConnectRecord<R>> implements Transformat
 
         // Parse the date string into LocalDateTime
         LocalDateTime dateTime = LocalDateTime.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        java.sql.Timestamp ts = java.sql.Timestamp.valueOf(dateTime);
+        SimpleDateFormat simpleDateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        String dateTimeString = simpleDateFormatter.format(ts);
+
+
 
         // Create a new schema including the timestamp field (you may want to adjust the schema more depending on your needs)
 
         Schema updatedSchema = SchemaBuilder.struct()
 //                .from(schema)
-                .field(field, Timestamp.SCHEMA) // Update field schema to Timestamp
+                .field(field, org.apache.kafka.connect.data.Date.SCHEMA) // Update field schema to Timestamp
                 .build();
+
 //        SchemaBuilder updatedSchema = Schema.struct()
 //                .from(schema)
 //                .field(field, Timestamp.SCHEMA) // Update field schema to Timestamp
@@ -53,14 +73,17 @@ public class StringToDateTime<R extends ConnectRecord<R>> implements Transformat
         // Create a new Struct with the updated schema and copy the fields from the original struct
         Struct updatedStruct = new Struct(updatedSchema);
         for (Field field : schema.fields()) {
-            updatedStruct.put(field.name(), struct.get(field));
+            if (field.name().equals(this.field)) {
+                updatedStruct.put(field.name(), StringToDate(simpleDateFormatter, dateTimeString));
+            } else {
+                updatedStruct.put(field.name(), struct.get(field));
+            }
         }
 
         // Replace the string field with the LocalDateTime converted to java.util.Date (expected by Timestamp schema)
-        updatedStruct.put(field, java.sql.Timestamp.valueOf(dateTime));
+        updatedStruct.put(field, StringToDate(simpleDateFormatter, dateTimeString));
 
-        return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(),
-                record.key(), updatedSchema, updatedStruct, record.timestamp());
+        return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(), updatedSchema, updatedStruct, record.timestamp());
     }
 
     @Override
@@ -82,3 +105,4 @@ public class StringToDateTime<R extends ConnectRecord<R>> implements Transformat
         }
     }
 }
+
