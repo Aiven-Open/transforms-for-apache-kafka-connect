@@ -18,9 +18,13 @@ package io.aiven.kafka.connect.transforms;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
+
+import static java.util.stream.Collectors.toList;
 
 final class ConcatFieldsConfig extends AbstractConfig {
     public static final String FIELD_NAMES_CONFIG = "field.names";
@@ -69,8 +73,9 @@ final class ConcatFieldsConfig extends AbstractConfig {
                 DELIMITER_DOC);
     }
 
-    final List<String> fieldNames() {
-        return getList(FIELD_NAMES_CONFIG);
+    final List<CursorField> fields() {
+        return getList(FIELD_NAMES_CONFIG).stream().map(CursorField::new)
+                .collect(toList());
     }
 
     final String outputFieldName() {
