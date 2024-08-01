@@ -100,7 +100,7 @@ dependencies {
     testImplementation "org.apache.kafka:connect-api:$kafkaVersion"
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     testImplementation "io.debezium:debezium-api:$debeziumVersion"
-    testImplementation "org.assertj:assertj-core:3.26.0"
+    testImplementation "org.assertj:assertj-core:3.26.3"
 
     testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:2.23.1"
     testRuntimeOnly "org.apache.logging.log4j:log4j-api:2.23.1"
