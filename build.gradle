@@ -103,7 +103,7 @@ dependencies {
     testImplementation "org.assertj:assertj-core:3.26.3"
 
     testRuntimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:2.23.1"
-    testRuntimeOnly "org.apache.logging.log4j:log4j-api:2.23.1"
+    testRuntimeOnly "org.apache.logging.log4j:log4j-api:2.24.1"
     testRuntimeOnly "org.apache.logging.log4j:log4j-core:2.23.1"
 
     integrationTestImplementation "org.apache.kafka:connect-api:$kafkaVersion"
