@@ -21,6 +21,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Optional;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Field;
@@ -73,9 +74,9 @@ public abstract class Hash<R extends ConnectRecord<R>> implements Transformation
 
     public final Optional<Object> getNewValue(final R record, final SchemaAndValue schemaAndValue) {
         final Optional<Object> newValue;
-        if (config.fieldName().isPresent()) {
+        if (config.field().isPresent()) {
             newValue = getNewValueForNamedField(
-                record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.fieldName().get());
+                record.toString(), schemaAndValue.schema(), schemaAndValue.value(), config.field().get());
         } else {
             newValue = getNewValueWithoutFieldName(
                 record.toString(), schemaAndValue.schema(), schemaAndValue.value());
@@ -94,7 +95,7 @@ public abstract class Hash<R extends ConnectRecord<R>> implements Transformation
     private Optional<Object> getNewValueForNamedField(final String recordStr,
                                                       final Schema schema,
                                                       final Object value,
-                                                      final String fieldName) {
+                                                      final CursorField field) {
         if (Schema.Type.STRUCT != schema.type()) {
             throw new DataException(dataPlace() + " schema type must be STRUCT if field name is specified: "
                     + recordStr);
@@ -104,34 +105,34 @@ public abstract class Hash<R extends ConnectRecord<R>> implements Transformation
             throw new DataException(dataPlace() + " can't be null if field name is specified: " + recordStr);
         }
 
-        final Field field = schema.field(fieldName);
-        if (field == null) {
+        final Field fieldSchema = field.read(schema);
+        if (fieldSchema == null) {
             if (config.skipMissingOrNull()) {
-                log.debug(fieldName + " in " + dataPlace() + " schema is missing, skipping transformation");
+                log.debug(field.getCursor() + " in " + dataPlace() + " schema is missing, skipping transformation");
                 return Optional.empty();
             } else {
-                throw new DataException(fieldName + " in " + dataPlace() + " schema can't be missing: " + recordStr);
+                throw new DataException(field.getCursor() + " in " + dataPlace() + " schema can't be missing: " + recordStr);
             }
         }
 
-        if (field.schema().type() != Schema.Type.STRING) {
-            throw new DataException(fieldName + " schema type in " + dataPlace()
+        if (fieldSchema.schema().type() != Schema.Type.STRING) {
+            throw new DataException(field.getCursor() + " schema type in " + dataPlace()
                     + " must be " + Schema.Type.STRING
                     + ": " + recordStr);
         }
 
         final Struct struct = (Struct) value;
-        final String stringValue = struct.getString(fieldName);
-        if (stringValue == null) {
+        final Optional<String> stringValue = field.readAsString(struct);
+        if (stringValue.isEmpty()) {
             if (config.skipMissingOrNull()) {
-                log.debug(fieldName + " in " + dataPlace() + " is null, skipping transformation");
+                log.debug(field.getCursor() + " in " + dataPlace() + " is null, skipping transformation");
                 return Optional.empty();
             } else {
-                throw new DataException(fieldName + " in " + dataPlace() + " can't be null: " + recordStr);
+                throw new DataException(field.getCursor() + " in " + dataPlace() + " can't be null: " + recordStr);
             }
         } else {
-            final String updatedValue = hashString(stringValue);
-            final Struct updatedRecord = struct.put(fieldName, updatedValue);
+            final String updatedValue = hashString(stringValue.get());
+            final Struct updatedRecord = struct.put(field.getCursor(), updatedValue);
             return Optional.ofNullable(updatedRecord);
         }
     }
