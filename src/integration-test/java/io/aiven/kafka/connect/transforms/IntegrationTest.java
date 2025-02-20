@@ -19,7 +19,9 @@ package io.aiven.kafka.connect.transforms;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -30,9 +32,12 @@ import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.TopicPartition;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -130,6 +135,9 @@ final class IntegrationTest {
             "org.apache.kafka.common.serialization.ByteArrayDeserializer");
         consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
             "org.apache.kafka.common.serialization.ByteArrayDeserializer");
+        consumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+        consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer");
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         consumer = new KafkaConsumer<>(consumerProps);
 
         final NewTopic originalTopic = new NewTopic(TestSourceConnector.ORIGINAL_TOPIC, 1, (short) 1);
@@ -156,7 +164,7 @@ final class IntegrationTest {
 
     @Test
     @Timeout(10)
-    final void testExtractTopic() throws ExecutionException, InterruptedException, IOException {
+    final void testExtractTopic() throws ExecutionException, InterruptedException {
         final Map<String, String> connectorConfig = new HashMap<>();
         connectorConfig.put("name", "test-source-connector");
         connectorConfig.put("connector.class", TestSourceConnector.class.getName());
@@ -192,6 +200,55 @@ final class IntegrationTest {
         connectRunner.createConnector(connectorConfig);
         checkMessageTopics(originalTopicValueFromSchema, newTopicValueFromSchema);
 
+    }
+
+    @Test
+    @Timeout(10)
+    void testCaseTransform() throws ExecutionException, InterruptedException, IOException {
+        adminClient.createTopics(Arrays.asList(new NewTopic(TestCaseTransformConnector.SOURCE_TOPIC, 1, (short) 1)))
+                .all().get();
+        adminClient.createTopics(Arrays.asList(new NewTopic(TestCaseTransformConnector.TARGET_TOPIC, 1, (short) 1)))
+                .all().get();
+
+        final Map<String, String> connectorConfig = new HashMap<>();
+        connectorConfig.put("name", "test-source-connector");
+        connectorConfig.put("connector.class", TestCaseTransformConnector.class.getName());
+        connectorConfig.put("key.converter", "org.apache.kafka.connect.json.JsonConverter");
+        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+        connectorConfig.put("value.converter.value.subject.name.strategy",
+                "io.confluent.kafka.serializers.subject.RecordNameStrategy");
+        connectorConfig.put("tasks.max", "1");
+        connectorConfig.put("transforms", "regexRouteToTargetTopic, caseTransform");
+        connectorConfig.put("transforms.caseTransform.case", "upper");
+        connectorConfig.put("transforms.caseTransform.field.names", TestCaseTransformConnector.TRANSFORM_FIELD);
+        connectorConfig.put("transforms.caseTransform.type", "io.aiven.kafka.connect.transforms.CaseTransform$Value");
+        connectorConfig.put("transforms.regexRouteToTargetTopic.type",
+                "org.apache.kafka.connect.transforms.RegexRouter");
+        connectorConfig.put("transforms.regexRouteToTargetTopic.regex", "(.*)-source-(.*)");
+        connectorConfig.put("transforms.regexRouteToTargetTopic.replacement", String.format("$1-target-$2"));
+
+        connectRunner.createConnector(connectorConfig);
+        checkMessageTransformInTopic(
+                new TopicPartition(TestCaseTransformConnector.TARGET_TOPIC, 0),
+                TestCaseTransformConnector.MESSAGES_TO_PRODUCE
+        );
+    }
+
+    final void checkMessageTransformInTopic(final TopicPartition topicPartition, final long expectedNumberOfMessages)
+            throws InterruptedException, IOException {
+        waitForCondition(
+            () -> consumer.endOffsets(Arrays.asList(topicPartition))
+                    .values().stream().reduce(Long::sum).map(s -> s == expectedNumberOfMessages)
+                    .orElse(false), 5000, "Messages appear in target topic"
+        );
+        consumer.subscribe(Collections.singletonList(topicPartition.topic()));
+        final ObjectMapper objectMapper = new ObjectMapper();
+        final TypeReference<Map<String, Object>> tr = new TypeReference<>() {};
+        for (final ConsumerRecord<byte[], byte[]> consumerRecord : consumer.poll(Duration.ofSeconds(1))) {
+            final Map<String, Object> value = objectMapper.readValue(consumerRecord.value(), tr);
+            final Map<String, String> payload = (Map<String, String>) value.get("payload");
+            assertThat(payload.get("transform")).isEqualTo("LOWER-CASE-DATA-TRANSFORMS-TO-UPPERCASE");
+        }
     }
 
     final void checkMessageTopics(final TopicPartition originalTopicPartition, final TopicPartition newTopicPartition)

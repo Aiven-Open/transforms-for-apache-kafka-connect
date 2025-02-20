@@ -21,12 +21,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
-import org.apache.kafka.connect.source.SourceConnector;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
@@ -35,7 +33,7 @@ import org.apache.kafka.connect.source.SourceTask;
  *
  * <p>It just produces a fixed number of struct records.
  */
-public class TestSourceConnector extends SourceConnector {
+public final class TestSourceConnector extends AbstractTestSourceConnector {
     static final long MESSAGES_TO_PRODUCE = 10L;
 
     static final String ORIGINAL_TOPIC = "original-topic";
@@ -43,31 +41,8 @@ public class TestSourceConnector extends SourceConnector {
     static final String ROUTING_FIELD = "field-0";
 
     @Override
-    public void start(final Map<String, String> props) {
-    }
-
-    @Override
     public Class<? extends Task> taskClass() {
         return TestSourceConnectorTask.class;
-    }
-
-    @Override
-    public List<Map<String, String>> taskConfigs(final int maxTasks) {
-        return Collections.singletonList(Collections.emptyMap());
-    }
-
-    @Override
-    public void stop() {
-    }
-
-    @Override
-    public ConfigDef config() {
-        return new ConfigDef();
-    }
-
-    @Override
-    public String version() {
-        return null;
     }
 
     public static class TestSourceConnectorTask extends SourceTask {
@@ -83,7 +58,7 @@ public class TestSourceConnector extends SourceConnector {
         }
 
         @Override
-        public List<SourceRecord> poll() throws InterruptedException {
+        public List<SourceRecord> poll() {
             if (counter >= MESSAGES_TO_PRODUCE) {
                 return null; // indicate pause
             }
