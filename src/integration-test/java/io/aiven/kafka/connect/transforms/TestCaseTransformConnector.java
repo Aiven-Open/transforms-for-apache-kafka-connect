@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Aiven Oy
+ * Copyright 2025 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,44 +28,33 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.kafka.connect.source.SourceTask;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+public class TestCaseTransformConnector extends AbstractTestSourceConnector {
+    static final long MESSAGES_TO_PRODUCE = 10L;
 
-/**
- * A connector needed for testing of ExtractTopicFromValueSchema.
- *
- * <p>It just produces a fixed number of struct records with value schema name set.
- */
-public class TopicFromValueSchemaConnector extends AbstractTestSourceConnector {
-    static final int MESSAGES_TO_PRODUCE = 10;
-
-    private static final Logger log = LoggerFactory.getLogger(TopicFromValueSchemaConnector.class);
-    static final String TOPIC = "topic-for-value-schema-connector-test";
-    static final String FIELD = "field-0";
-
-    static  final String NAME = "com.acme.schema.SchemaNameToTopic";
+    static final String SOURCE_TOPIC = "case-transform-source-topic";
+    static final String TARGET_TOPIC = "case-transform-target-topic";
+    static final String TRANSFORM_FIELD = "transform";
 
     @Override
     public Class<? extends Task> taskClass() {
-        return TopicFromValueSchemaConnectorTask.class;
+        return TestCaseTransformConnector.TestSourceConnectorTask.class;
     }
 
-    public static class TopicFromValueSchemaConnectorTask extends SourceTask {
+    public static class TestSourceConnectorTask extends SourceTask {
         private int counter = 0;
 
         private final Schema valueSchema = SchemaBuilder.struct()
-                .field(FIELD, SchemaBuilder.STRING_SCHEMA)
-                .name(NAME)
+                .field(TRANSFORM_FIELD, SchemaBuilder.STRING_SCHEMA)
                 .schema();
-        private final Struct value = new Struct(valueSchema).put(FIELD, "Data");
+        private final Struct value =
+                new Struct(valueSchema).put(TRANSFORM_FIELD, "lower-case-data-transforms-to-uppercase");
 
         @Override
         public void start(final Map<String, String> props) {
-            log.info("Started TopicFromValueSchemaConnector!!!");
         }
 
         @Override
-        public List<SourceRecord> poll()  {
+        public List<SourceRecord> poll() {
             if (counter >= MESSAGES_TO_PRODUCE) {
                 return null; // indicate pause
             }
@@ -79,7 +68,7 @@ public class TopicFromValueSchemaConnector extends AbstractTestSourceConnector {
 
             return Collections.singletonList(
                     new SourceRecord(sourcePartition, sourceOffset,
-                            TOPIC,
+                            SOURCE_TOPIC,
                             valueSchema, value)
             );
         }

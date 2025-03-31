@@ -42,6 +42,7 @@ sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
 ext {
+    jacksonVersion = "2.18.2"
     kafkaVersion = "2.0.1"
     testcontainersVersion = "1.20.4"
     debeziumVersion = "1.3.0.Final"
@@ -114,6 +115,7 @@ dependencies {
     integrationTestImplementation "org.apache.kafka:connect-transforms:$kafkaVersion"
 
     integrationTestImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+    integrationTestImplementation("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
     integrationTestImplementation "org.testcontainers:kafka:$testcontainersVersion" // this is not Kafka version
     // Make test utils from 'test' available in 'integration-test'
     integrationTestImplementation sourceSets.test.output

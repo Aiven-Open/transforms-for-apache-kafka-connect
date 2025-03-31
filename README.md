@@ -196,6 +196,32 @@ transforms.ExtractTopicFromValueSchema.type=io.aiven.kafka.connect.transforms.Ex
 transforms.ExtractTopicFromValueSchema.schema.name.regex=(?:[.]|^)([^.]*)$
 ```
 
+### `CaseTransform`
+
+This transformation transforms the case a string value from the record field to uppercase or lowercase.
+
+This transform can modify fields of `STRING` type.
+
+It supports fields with (e.g. Avro) or without schema (e.g. JSON).
+
+Exists in two variants:
+- `io.aiven.kafka.connect.transforms.CaseTransform$Key` - works on keys;
+- `io.aiven.kafka.connect.transforms.CaseTransform$Value` - works on values.
+
+The transformation defines the following configurations:
+
+- `field.names` - The name of the fields which should be case transformed.
+- `case` - either `lower` or `upper` for transforming the case as desired.
+
+Here is an example of this transformation configuration:
+
+```properties
+transforms=caseTransform
+transforms.caseTransform.type=io.aiven.kafka.connect.transforms.CaseTransform$Value
+transforms.caseTransform.field.names=field_name_1, field_name_2
+```
+
+
 ## License
 
 This project is licensed under the [Apache License, Version 2.0](LICENSE).
