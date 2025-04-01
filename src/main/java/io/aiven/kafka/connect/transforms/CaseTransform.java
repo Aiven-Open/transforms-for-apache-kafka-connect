@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class CaseTransform<R extends ConnectRecord<R>> implements Transformation<R> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConcatFields.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CaseTransform.class);
 
     /**
      * The configuration for case transform.
@@ -60,13 +60,12 @@ public abstract class CaseTransform<R extends ConnectRecord<R>> implements Trans
 
     /**
      * Apply the case transformation to given new struct from the original struct field.
-     * @param struct Original struct
      * @param newStruct New struct
      * @param fieldName The field name to case transform
      */
-    private void applyStruct(final Struct struct, final Struct newStruct, final String fieldName) {
+    private void applyStruct(final Struct newStruct, final String fieldName) {
         try {
-            final Object value = struct.get(fieldName);
+            final Object value = newStruct.get(fieldName);
             if (value == null) {
                 newStruct.put(fieldName, null);
                 return;
@@ -108,7 +107,7 @@ public abstract class CaseTransform<R extends ConnectRecord<R>> implements Trans
                 newStruct.put(field.name(), struct.get(field));
             });
             config.fieldNames().forEach(field -> {
-                applyStruct(struct, newStruct, field);
+                applyStruct(newStruct, field);
             });
             newRecord = createNewRecord(record, struct.schema(), newStruct);
         } else if (schemaAndValue.value() instanceof Map) {
