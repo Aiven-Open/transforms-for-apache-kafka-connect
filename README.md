@@ -221,6 +221,38 @@ transforms.caseTransform.type=io.aiven.kafka.connect.transforms.CaseTransform$Va
 transforms.caseTransform.field.names=field_name_1, field_name_2
 ```
 
+### `KeyToValue`
+
+Updates the record value with information found in the record key.
+
+This transformation extracts fields from the key and adds them to the value.  This is similar to the standard [ValueToKey](https://kafka.apache.org/documentation/#org.apache.kafka.connect.transforms.ValueToKey) transformation from Kafka, but doesn't replace the value.
+
+This supports extracting information from a record key with a schema (e.g. Avro) or without a schema (e.g. JSON), as well as from a record value with a schema or without a schema.
+
+The transformation defines the following configurations:
+
+- `key.fields` - The comma-separated name(s) of the fields in the record key that should be extracted, or `*` to use the entire key.
+- `value.fields` - The comma-separated name(s) of the fields to add into the record value, in the same order as `key.field.names`.
+
+Any empty or missing value field uses the same name as the key field by default.  If a `*` is specified as the key field, its default value field name is `_key`.
+
+Here is an example of this transformation configuration that copies the `id`, `department` and `cost` fields from the key to the value, and renames the `department` field in the value to `dept`:
+
+```properties
+transforms=keyToValue
+transforms.keyToValue.type=io.aiven.kafka.connect.transforms.KeyToValue
+transforms.keyToValue.key.fields=id, department, cost
+transforms.keyToValue.value.fields=id, dept
+```
+
+Here is an example of this transformation configuration that copies the entire key to the value, under the field `_key`:
+
+```properties
+transforms=copyKey
+transforms.copyKey.type=io.aiven.kafka.connect.transforms.KeyToValue
+transforms.copyKey.key.fields=*
+```
+
 
 ## License
 
