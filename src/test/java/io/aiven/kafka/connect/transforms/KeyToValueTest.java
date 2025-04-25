@@ -258,11 +258,11 @@ public class KeyToValueTest {
     @Test
     public void errorDuplicateValueMapping() {
         final DataException ex = assertThrows(DataException.class,
-                () -> k2v.configure(Map.of("key.fields", "a,a", "value.fields", "x,x")));
+            () -> k2v.configure(Map.of("key.fields", "a,a", "value.fields", "x,x")));
         assertEquals("More than one key value is copied to the value field name 'x'", ex.getMessage());
 
         final DataException ex2 = assertThrows(DataException.class,
-                () -> k2v.configure(Map.of("key.fields", "*,*,*,*", "value.fields", "a,b")));
+            () -> k2v.configure(Map.of("key.fields", "*,*,*,*", "value.fields", "a,b")));
         assertEquals("More than one key value is copied to the value field name '_key'", ex2.getMessage());
     }
 }
