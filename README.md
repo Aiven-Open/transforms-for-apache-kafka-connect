@@ -99,6 +99,7 @@ The transformation defines the following configurations:
   - `fail` - fail with `DataException`.
 
 Here is an example of this transformation configuration:
+
 ```properties
 transforms=TombstoneHandler
 transforms.TombstoneHandler.type=io.aiven.kafka.connect.transforms.TombstoneHandler
@@ -139,6 +140,7 @@ This transformation converts a record into a tombstone by setting its value and 
 It can be used together with predicates, for example, to create a tombstone event from a delete event produced by a source connector.
 
 Here is an example of this transformation configuration:
+
 ```properties
 transforms=MakeTombstone
 transforms.MakeTombstone.type=io.aiven.kafka.connect.transforms.MakeTombstone
@@ -188,6 +190,7 @@ transforms.ExtractTopicFromSchemaName.type=io.aiven.kafka.connect.transforms.Ext
 transforms.ExtractTopicFromSchemaName.schema.name.topic-map=com.acme.schema.SchemaNameToTopic1:TheNameToReplace1,com.acme.schema.SchemaNameToTopic2:TheNameToReplace2
 
 ```
+
 And here is an example of this transformation configuration (using :schema.name.regex)
 
 ```properties
@@ -232,7 +235,7 @@ This supports extracting information from a record key with a schema (e.g. Avro)
 The transformation defines the following configurations:
 
 - `key.fields` - The comma-separated name(s) of the fields in the record key that should be extracted, or `*` to use the entire key.
-- `value.fields` - The comma-separated name(s) of the fields to add into the record value, in the same order as `key.field.names`.
+- `value.fields` - The comma-separated name(s) of the fields to add into the record value, in the same order as `key.fields`.
 
 Any empty or missing value field uses the same name as the key field by default.  If a `*` is specified as the key field, its default value field name is `_key`.
 
@@ -253,7 +256,6 @@ transforms.copyKey.type=io.aiven.kafka.connect.transforms.KeyToValue
 transforms.copyKey.key.fields=*
 ```
 
-
 ## License
 
 This project is licensed under the [Apache License, Version 2.0](LICENSE).
@@ -261,4 +263,3 @@ This project is licensed under the [Apache License, Version 2.0](LICENSE).
 ## Trademarks
 
 Apache Kafka and Apache Kafka Connect are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries.
-
