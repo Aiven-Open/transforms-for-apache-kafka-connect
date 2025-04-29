@@ -16,13 +16,14 @@
 
 package io.aiven.kafka.connect.transforms;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
+import org.apache.kafka.common.config.ConfigException;
+import org.junit.jupiter.api.Test;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.kafka.common.config.ConfigException;
-
-import org.junit.jupiter.api.Test;
+import java.util.stream.Collectors;
 
 import static io.aiven.kafka.connect.transforms.ConcatFieldsConfig.DELIMITER_CONFIG;
 import static io.aiven.kafka.connect.transforms.ConcatFieldsConfig.FIELD_NAMES_CONFIG;
@@ -36,8 +37,8 @@ class ConcatFieldsConfigTest {
     void emptyConfig() {
         final Map<String, String> props = new HashMap<>();
         assertThatThrownBy(() -> new ConcatFieldsConfig(props))
-            .isInstanceOf(ConfigException.class)
-            .hasMessage("Missing required configuration \"field.names\" which has no default value.");
+                .isInstanceOf(ConfigException.class)
+                .hasMessage("Missing required configuration \"field.names\" which has no default value.");
     }
 
     @Test
@@ -45,8 +46,8 @@ class ConcatFieldsConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put(FIELD_NAMES_CONFIG, "");
         assertThatThrownBy(() -> new ConcatFieldsConfig(props))
-            .isInstanceOf(ConfigException.class)
-            .hasMessage("Missing required configuration \"output.field.name\" which has no default value.");
+                .isInstanceOf(ConfigException.class)
+                .hasMessage("Missing required configuration \"output.field.name\" which has no default value.");
     }
 
     @Test
@@ -57,7 +58,8 @@ class ConcatFieldsConfigTest {
         props.put(DELIMITER_CONFIG, "-");
         props.put(FIELD_REPLACE_MISSING_CONFIG, "*");
         final ConcatFieldsConfig config = new ConcatFieldsConfig(props);
-        assertThat(config.fieldNames()).isEqualTo(Arrays.asList("test", "foo", "bar"));
+        assertThat(config.fields()
+                         .stream().map(CursorField::getCursor)).containsOnly("test", "foo", "bar");
         assertThat(config.outputFieldName()).isEqualTo("combined");
         assertThat(config.delimiter()).isEqualTo("-");
         assertThat(config.fieldReplaceMissing()).isEqualTo("*");
