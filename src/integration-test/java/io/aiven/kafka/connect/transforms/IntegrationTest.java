@@ -249,7 +249,6 @@ final class IntegrationTest {
         connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
         connectorConfig.put("tasks.max", "1");
         connectorConfig.put("transforms", "keyToValue");
-        connectorConfig.put("transforms.keyToValue.case", "upper");
         connectorConfig.put("transforms.keyToValue.key.fields", "a1,a3");
         connectorConfig.put("transforms.keyToValue.value.fields", "b1");
         connectorConfig.put("transforms.keyToValue.type", "io.aiven.kafka.connect.transforms.KeyToValue");
