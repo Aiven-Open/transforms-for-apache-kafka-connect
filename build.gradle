@@ -47,7 +47,7 @@ ext {
     junit5Version = "5.12.2"
     kafkaVersion = "2.0.1"
     log4jVersion = "2.24.3"
-    testcontainersVersion = "1.20.4"
+    testcontainersVersion = "1.21.0"
 }
 
 distributions {
