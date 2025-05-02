@@ -49,9 +49,9 @@ public class KeyToValueTest {
     private static Struct createStruct(final Object... kvs) {
         SchemaBuilder sb = SchemaBuilder.struct();
         for (int i = 0; i < kvs.length; i += 2) {
-            Schema fieldSchema = Schema.OPTIONAL_STRING_SCHEMA;
+            Schema fieldSchema = Schema.STRING_SCHEMA;
             if (kvs[i + 1] instanceof Integer) {
-                fieldSchema = Schema.OPTIONAL_INT32_SCHEMA;
+                fieldSchema = Schema.INT32_SCHEMA;
             } else if (kvs[i + 1] instanceof Struct) {
                 fieldSchema = ((Struct) kvs[i + 1]).schema();
             }
@@ -107,7 +107,7 @@ public class KeyToValueTest {
     @Test
     public void schemaIntToSchemaStructWholeKey() {
         final int key = 123;
-        final SinkRecord input = new SinkRecord("", 0, Schema.OPTIONAL_INT32_SCHEMA, key, XYZ_STRUCT.schema(),
+        final SinkRecord input = new SinkRecord("", 0, Schema.INT32_SCHEMA, key, XYZ_STRUCT.schema(),
                 XYZ_STRUCT, 0);
 
         final Struct expectedValue = createStruct("x", 100, "y", 200, "z", 300, "_key", 123);
@@ -139,7 +139,7 @@ public class KeyToValueTest {
     @Test
     public void schemaIntToSchemaStructWholeKeyWithRenaming() {
         final int key = 123;
-        final SinkRecord input = new SinkRecord("", 0, Schema.OPTIONAL_INT32_SCHEMA, key, XYZ_STRUCT.schema(),
+        final SinkRecord input = new SinkRecord("", 0, Schema.INT32_SCHEMA, key, XYZ_STRUCT.schema(),
                 XYZ_STRUCT, 0);
 
         final Struct expectedValue = createStruct("x", 123, "y", 123, "z", 300, "m", 123, "n", 123, "_key", 123);

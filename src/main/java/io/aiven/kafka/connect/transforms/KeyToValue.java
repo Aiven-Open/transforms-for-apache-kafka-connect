@@ -32,6 +32,7 @@ import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.data.Values;
 import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.transforms.Transformation;
 
@@ -98,8 +99,14 @@ public class KeyToValue<R extends ConnectRecord<R>> implements Transformation<R>
     }
 
 
-    private void validateUnextractableKeyFields(final R record) {
-        // If the key fields have names, but the key value doesn't support names
+    /**
+     * Validation check to ensure that if any named fields exist, they can be extracted from the structured data in the
+     * key.
+     *
+     * @param record The incoming record to be transformed.
+     * @throws DataException if the key does not support extracting named fields.
+     */
+    private void validateNoUnextractableKeyFields(final R record) {
         if (keyFieldsHasNamedFields && record.keySchema() != null && record.keySchema().type() != Schema.Type.STRUCT) {
             throw new DataException(
                     String.format("Named key fields %s cannot be copied from the key schema: %s", valueFields.values(),
@@ -114,7 +121,14 @@ public class KeyToValue<R extends ConnectRecord<R>> implements Transformation<R>
         }
     }
 
-    private void validateKeyFieldSchemaRequired(final R record) {
+    /**
+     * Validation check to fail quickly when the entire key is copied into a structured value with a schema, but has a
+     * schemaless class.
+     *
+     * @param record The incoming record to be transformed.
+     * @throws DataException if the value class requires the key to have a schema but the key is a schemaless class.
+     */
+    private void validateKeySchemaRequirementsMet(final R record) {
         if (keyFieldsHasWildcard && record.keySchema() == null && record.key() instanceof Map) {
             if (record.valueSchema() != null && record.valueSchema().type() == Schema.Type.STRUCT) {
                 throw new DataException("The value requires a schema, but the key class is a schemaless Map");
@@ -122,6 +136,9 @@ public class KeyToValue<R extends ConnectRecord<R>> implements Transformation<R>
         }
     }
 
+    /**
+     * Validation check to ensure that the value can receive columns from the key, i.e. as either a Struct or Map.
+     */
     private void validateStructuredValue(final R record) {
         if (record.valueSchema() == null && !(record.value() instanceof Map)
                 || record.valueSchema() != null && record.valueSchema().type() != Schema.Type.STRUCT) {
@@ -131,15 +148,20 @@ public class KeyToValue<R extends ConnectRecord<R>> implements Transformation<R>
 
     @Override
     public R apply(final R record) {
-        validateUnextractableKeyFields(record);
-        validateKeyFieldSchemaRequired(record);
+        validateNoUnextractableKeyFields(record);
+        validateKeySchemaRequirementsMet(record);
         validateStructuredValue(record);
 
         if (record.value() instanceof Struct) {
             if (record.keySchema() != null) {
                 return applyToStruct(record, record.keySchema());
             } else {
-                return applyToStruct(record, inferSchemaFromPrimitive(record.key()));
+                final Schema inferredSchema = Values.inferSchema(record.key());
+                if (inferredSchema == null) {
+                    throw new DataException(
+                            "Cannot infer schema for unsupported key class: " + record.key().getClass().getName());
+                }
+                return applyToStruct(record, inferredSchema);
             }
         } else {
             return applyToMap(record);
@@ -198,34 +220,6 @@ public class KeyToValue<R extends ConnectRecord<R>> implements Transformation<R>
         // Replace the value in the record
         return record.newRecord(record.topic(), record.kafkaPartition(), record.keySchema(), record.key(),
                 newValue.schema(), newValue, record.timestamp());
-    }
-
-    /**
-     * Infers the schema from a primitive key.
-     *
-     * @param key The key value.
-     * @return The inferred schema.
-     */
-    private Schema inferSchemaFromPrimitive(final Object key) {
-        if (key instanceof String) {
-            return Schema.OPTIONAL_STRING_SCHEMA;
-        } else if (key instanceof Boolean) {
-            return Schema.OPTIONAL_BOOLEAN_SCHEMA;
-        } else if (key instanceof Byte) {
-            return Schema.OPTIONAL_INT8_SCHEMA;
-        } else if (key instanceof Short) {
-            return Schema.OPTIONAL_INT16_SCHEMA;
-        } else if (key instanceof Integer) {
-            return Schema.OPTIONAL_INT32_SCHEMA;
-        } else if (key instanceof Long) {
-            return Schema.OPTIONAL_INT64_SCHEMA;
-        } else if (key instanceof Float) {
-            return Schema.OPTIONAL_FLOAT32_SCHEMA;
-        } else if (key instanceof Double) {
-            return Schema.OPTIONAL_FLOAT64_SCHEMA;
-        } else {
-            throw new DataException("Cannot infer schema for unsupported key class: " + key.getClass().getName());
-        }
     }
 
     /**
