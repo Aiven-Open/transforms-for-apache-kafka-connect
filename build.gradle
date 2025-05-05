@@ -36,8 +36,10 @@ plugins {
 
 repositories {
     mavenCentral()
+    maven {
+        url 'https://packages.confluent.io/maven/'
+    }
 }
-
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
 
@@ -96,6 +98,10 @@ configurations {
 dependencies {
     compileOnly "org.apache.kafka:connect-api:$kafkaVersion"
     compileOnly "io.debezium:debezium-api:$debeziumVersion"
+    compileOnly "io.confluent:kafka-schema-registry-client:5.3.1"
+    compileOnly "io.confluent:kafka-avro-serializer:7.0.0"
+    compileOnly "com.fasterxml.jackson.core:jackson-databind:2.12.5"
+    compileOnly "org.apache.avro:avro:1.10.2"
 
     implementation "org.slf4j:slf4j-api:1.7.36"
 
