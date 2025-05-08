@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
@@ -144,7 +145,7 @@ final class IntegrationTest {
         final NewTopic newTopic = new NewTopic(TestSourceConnector.NEW_TOPIC, 1, (short) 1);
         final NewTopic originalTopicForExtractTopicFromValue =
                 new NewTopic(TopicFromValueSchemaConnector.TOPIC, 1, (short) 1);
-        final NewTopic newTopicForExtractTopicFromValue  =
+        final NewTopic newTopicForExtractTopicFromValue =
                 new NewTopic(TopicFromValueSchemaConnector.NAME, 1, (short) 1);
         adminClient.createTopics(Arrays.asList(originalTopic, newTopic, originalTopicForExtractTopicFromValue,
                 newTopicForExtractTopicFromValue)).all().get();
@@ -232,6 +233,39 @@ final class IntegrationTest {
                 new TopicPartition(TestCaseTransformConnector.TARGET_TOPIC, 0),
                 TestCaseTransformConnector.MESSAGES_TO_PRODUCE
         );
+    }
+
+    @Test
+    @Timeout(10)
+    void testKeyToValue() throws ExecutionException, InterruptedException, IOException {
+
+        final String topicName = TestKeyToValueConnector.TARGET_TOPIC;
+        adminClient.createTopics(List.of(new NewTopic(topicName, 1, (short) 1))).all().get();
+
+        final Map<String, String> connectorConfig = new HashMap<>();
+        connectorConfig.put("name", "test-source-connector");
+        connectorConfig.put("connector.class", TestKeyToValueConnector.class.getName());
+        connectorConfig.put("key.converter", "org.apache.kafka.connect.json.JsonConverter");
+        connectorConfig.put("value.converter", "org.apache.kafka.connect.json.JsonConverter");
+        connectorConfig.put("tasks.max", "1");
+        connectorConfig.put("transforms", "keyToValue");
+        connectorConfig.put("transforms.keyToValue.key.fields", "a1,a3");
+        connectorConfig.put("transforms.keyToValue.value.fields", "b1");
+        connectorConfig.put("transforms.keyToValue.type", "io.aiven.kafka.connect.transforms.KeyToValue");
+
+        connectRunner.createConnector(connectorConfig);
+
+        waitForCondition(
+            () -> consumer.endOffsets(Collections.singletonList(new TopicPartition(topicName, 0)))
+                    .values().stream().reduce(Long::sum).map(s -> s == TestKeyToValueConnector.MESSAGES_TO_PRODUCE)
+                    .orElse(false), 5000, "Messages appear in target topic"
+        );
+
+        final String payload = "'payload':{'b1':'a1','b2':'b2','b3':'b3','a3':'a3'}".replace('\'', '"');
+        consumer.subscribe(Collections.singletonList(topicName));
+        for (final ConsumerRecord<byte[], byte[]> consumerRecord : consumer.poll(Duration.ofSeconds(1))) {
+            assertThat(consumerRecord.value()).asString().contains(payload);
+        }
     }
 
     final void checkMessageTransformInTopic(final TopicPartition topicPartition, final long expectedNumberOfMessages)
