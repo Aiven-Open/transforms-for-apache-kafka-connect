@@ -21,6 +21,8 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
+
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
@@ -32,9 +34,11 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.data.Values;
 import org.apache.kafka.connect.transforms.Transformation;
 
+import static java.util.function.Predicate.not;
+
 public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements Transformation<R> {
 
-    private String fieldName;
+    private Optional<CursorField> field;
     private Optional<String> fieldExpectedValue;
     private Optional<String> fieldValuePattern;
 
@@ -68,7 +72,9 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
     @Override
     public void configure(final Map<String, ?> configs) {
         final AbstractConfig config = new AbstractConfig(config(), configs);
-        this.fieldName = config.getString("field.name");
+        this.field = Optional.ofNullable(config.getString("field.name"))
+                             .filter(not(String::isEmpty))
+                             .map(CursorField::new);
         this.fieldExpectedValue = Optional.ofNullable(config.getString("field.value"));
         this.fieldValuePattern = Optional.ofNullable(config.getString("field.value.pattern"));
         final boolean expectedValuePresent = fieldExpectedValue.isPresent();
@@ -116,29 +122,26 @@ public abstract class FilterByFieldValue<R extends ConnectRecord<R>> implements 
 
     private R applyWithSchema(final R record) {
         final Struct struct = (Struct) operatingValue(record);
-        final SchemaAndValue schemaAndValue = getStructFieldValue(struct, fieldName).orElse(null);
+        final SchemaAndValue schemaAndValue = field.flatMap(f -> getStructFieldValue(struct, f)).orElse(null);
         return filterCondition.test(schemaAndValue) ? record : null;
     }
 
-    private Optional<SchemaAndValue> getStructFieldValue(final Struct struct, final String fieldName) {
-        final Schema schema = struct.schema();
-        final Field field = schema.field(fieldName);
-        final Object fieldValue = struct.get(field);
-        if (fieldValue == null) {
-            return Optional.empty();
-        } else {
-            return Optional.of(new SchemaAndValue(field.schema(), struct.get(field)));
-        }
+    private Optional<SchemaAndValue> getStructFieldValue(final Struct struct, final CursorField field) {
+        Optional<Object> value = field.read(struct);
+        Field fieldSchema = field.read(struct.schema());
+
+        return value.map(v -> new SchemaAndValue(fieldSchema.schema(), v));
     }
 
     @SuppressWarnings("unchecked")
     private R applySchemaless(final R record) {
-        if (fieldName == null || fieldName.isEmpty()) {
+        if (field.isEmpty()) {
             final SchemaAndValue schemaAndValue = getSchemalessFieldValue(operatingValue(record)).orElse(null);
             return filterCondition.test(schemaAndValue) ? record : null;
         } else {
             final Map<String, Object> map = (Map<String, Object>) operatingValue(record);
-            final SchemaAndValue schemaAndValue = getSchemalessFieldValue(map.get(fieldName)).orElse(null);
+            Object value = field.get().read(map).orElse(null);
+            final SchemaAndValue schemaAndValue = getSchemalessFieldValue(value).orElse(null);
             return filterCondition.test(schemaAndValue) ? record : null;
         }
     }

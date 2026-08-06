@@ -31,6 +31,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import static io.aiven.kafka.connect.transforms.ExtractTopicConfig.APPEND_DELIMITER_CONFIG;
+import static io.aiven.kafka.connect.transforms.ExtractTopicConfig.APPEND_TO_ORIGINAL_TOPIC_NAME_CONFIG;
+import static io.aiven.kafka.connect.transforms.ExtractTopicConfig.FIELD_NAME_CONFIG;
+import static io.aiven.kafka.connect.transforms.ExtractTopicConfig.SKIP_MISSING_OR_NULL_CONFIG;
+import static org.apache.kafka.connect.data.Schema.STRING_SCHEMA;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -75,7 +80,7 @@ abstract class ExtractTopicTest {
     @ParameterizedTest
     @NullAndEmptySource
     void noFieldName_NullOrEmptyValue_NoSkip_WithSchema(final String value) {
-        final Schema schema = Schema.STRING_SCHEMA;
+        final Schema schema = STRING_SCHEMA;
         final SinkRecord originalRecord = record(schema, value);
         assertThatThrownBy(() -> transformation(null, false).apply(originalRecord))
             .isInstanceOf(DataException.class)
@@ -94,7 +99,7 @@ abstract class ExtractTopicTest {
     @ParameterizedTest
     @NullAndEmptySource
     void noFieldName_NullOrEmptyValue_Skip_WithSchema(final String value) {
-        final Schema schema = Schema.STRING_SCHEMA;
+        final Schema schema = STRING_SCHEMA;
         final SinkRecord originalRecord = record(schema, value);
         final SinkRecord result = transformation(null, true).apply(originalRecord);
         assertThat(result).isEqualTo(originalRecord);
@@ -129,7 +134,7 @@ abstract class ExtractTopicTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void noFieldName_NormalStringValue(final boolean withSchema) {
-        final Schema schema = withSchema ? Schema.STRING_SCHEMA : null;
+        final Schema schema = withSchema ? STRING_SCHEMA : null;
         final SinkRecord originalRecord = record(schema, NEW_TOPIC);
         final SinkRecord result = transformation(null, false).apply(originalRecord);
         assertThat(result).isEqualTo(setNewTopic(originalRecord, NEW_TOPIC));
@@ -157,7 +162,7 @@ abstract class ExtractTopicTest {
     @ValueSource(booleans = {true, false})
     void fieldName_WithSchema_NullStruct(final boolean skipMissingOrNull) {
         final Schema schema = SchemaBuilder.struct()
-            .field(FIELD, Schema.STRING_SCHEMA)
+            .field(FIELD, STRING_SCHEMA)
             .schema();
         final SinkRecord originalRecord = record(schema, null);
         assertThatThrownBy(() -> transformation(FIELD, skipMissingOrNull).apply(originalRecord))
@@ -324,7 +329,7 @@ abstract class ExtractTopicTest {
         final SinkRecord originalRecord;
         if (withSchema) {
             final Schema schema = SchemaBuilder.struct()
-                .field(FIELD, Schema.STRING_SCHEMA)
+                .field(FIELD, STRING_SCHEMA)
                 .schema();
             originalRecord = record(schema, new Struct(schema).put(FIELD, NEW_TOPIC));
         } else {
@@ -335,12 +340,57 @@ abstract class ExtractTopicTest {
         assertThat(result).isEqualTo(setNewTopic(originalRecord, NEW_TOPIC));
     }
 
+    @Test
+    void fieldName_Nested_Schemaless() {
+        final Map<String, Object> valueMap = Map.of(
+                "parent", Map.of(
+                      "child", NEW_TOPIC
+                )
+        );
+
+        final SinkRecord originalRecord = record(null, valueMap);
+        final SinkRecord result = transformation("parent.child", false).apply(originalRecord);
+        assertThat(result).isEqualTo(setNewTopic(originalRecord, NEW_TOPIC));
+    }
+
+    @Test
+    void fieldName_Nested_Schema() {
+        final Schema innerSchema = SchemaBuilder.struct()
+                                                .field("child", STRING_SCHEMA)
+                                                .build();
+        final Schema schema = SchemaBuilder.struct()
+                                           .field("parent", innerSchema)
+                                           .schema();
+        final SinkRecord originalRecord = record(
+                schema, new Struct(schema).put("parent", new Struct(innerSchema).put("child", NEW_TOPIC)));
+
+        final SinkRecord result = transformation("parent.child", false).apply(originalRecord);
+        assertThat(result).isEqualTo(setNewTopic(originalRecord, NEW_TOPIC));
+    }
+
+    @Test
+    void append_Value() {
+        final Map<String, String> props = new HashMap<>();
+        props.put(FIELD_NAME_CONFIG, FIELD);
+        props.put(APPEND_TO_ORIGINAL_TOPIC_NAME_CONFIG, Boolean.toString(true));
+        props.put(APPEND_DELIMITER_CONFIG, "##");
+        final ExtractTopic<SinkRecord> transform = createTransformationObject();
+        transform.configure(props);
+
+        final Map<String, Object> valueMap = new HashMap<>();
+        valueMap.put(FIELD, "a");
+
+        final SinkRecord originalRecord = setNewTopic(record(null, valueMap), "original");
+        final SinkRecord result = transform.apply(originalRecord);
+        assertThat(result).isEqualTo(setNewTopic(originalRecord, "original##a"));
+    }
+
     private ExtractTopic<SinkRecord> transformation(final String fieldName, final boolean skipMissingOrNull) {
         final Map<String, String> props = new HashMap<>();
         if (fieldName != null) {
-            props.put("field.name", fieldName);
+            props.put(FIELD_NAME_CONFIG, fieldName);
         }
-        props.put("skip.missing.or.null", Boolean.toString(skipMissingOrNull));
+        props.put(SKIP_MISSING_OR_NULL_CONFIG, Boolean.toString(skipMissingOrNull));
         final ExtractTopic<SinkRecord> transform = createTransformationObject();
         transform.configure(props);
         return transform;

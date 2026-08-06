@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.transforms;
 import java.util.Map;
 import java.util.Optional;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
@@ -32,6 +33,14 @@ class ExtractTopicConfig extends AbstractConfig {
     private static final String SKIP_MISSING_OR_NULL_DOC =
         "In case the source of the new topic name is null or missing, "
         + "should a record be silently passed without transformation.";
+
+    public static final String APPEND_TO_ORIGINAL_TOPIC_NAME_CONFIG = "append.to.topic";
+    private static final String APPEND_TO_ORIGINAL_TOPIC_NAME_DOC =
+        "Appends the selected value to the existing topic name to derive the new topic name.";
+
+    public static final String APPEND_DELIMITER_CONFIG = "append.to.topic.delimiter";
+    private static final String APPEND_DELIMITER_DOC =
+        "Appends the selected value with the given delimiter to the existing topic name.";
 
     ExtractTopicConfig(final Map<?, ?> originals) {
         super(config(), originals);
@@ -50,18 +59,38 @@ class ExtractTopicConfig extends AbstractConfig {
                 ConfigDef.Type.BOOLEAN,
                 false,
                 ConfigDef.Importance.LOW,
-                SKIP_MISSING_OR_NULL_DOC);
+                SKIP_MISSING_OR_NULL_DOC)
+            .define(
+                APPEND_TO_ORIGINAL_TOPIC_NAME_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                false,
+                ConfigDef.Importance.LOW,
+                APPEND_TO_ORIGINAL_TOPIC_NAME_DOC)
+            .define(
+                APPEND_DELIMITER_CONFIG,
+                ConfigDef.Type.STRING,
+                "-",
+                ConfigDef.Importance.LOW,
+                APPEND_DELIMITER_DOC);
     }
 
-    Optional<String> fieldName() {
+    Optional<CursorField> field() {
         final String rawFieldName = getString(FIELD_NAME_CONFIG);
         if (null == rawFieldName || "".equals(rawFieldName)) {
             return Optional.empty();
         }
-        return Optional.of(rawFieldName);
+        return Optional.of(new CursorField(rawFieldName));
     }
 
     boolean skipMissingOrNull() {
         return getBoolean(SKIP_MISSING_OR_NULL_CONFIG);
+    }
+
+    boolean appendToExisting() {
+        return getBoolean(APPEND_TO_ORIGINAL_TOPIC_NAME_CONFIG);
+    }
+
+    String appendDelimiter() {
+        return getString(APPEND_DELIMITER_CONFIG);
     }
 }

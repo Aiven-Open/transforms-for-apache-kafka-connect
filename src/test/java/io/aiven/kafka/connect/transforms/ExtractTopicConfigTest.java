@@ -19,6 +19,7 @@ package io.aiven.kafka.connect.transforms;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.aiven.kafka.connect.transforms.utils.CursorField;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -30,7 +31,7 @@ class ExtractTopicConfigTest {
     void defaults() {
         final Map<String, String> props = new HashMap<>();
         final ExtractTopicConfig config = new ExtractTopicConfig(props);
-        assertThat(config.fieldName()).isNotPresent();
+        assertThat(config.field()).isNotPresent();
         assertThat(config.skipMissingOrNull()).isFalse();
     }
 
@@ -48,7 +49,7 @@ class ExtractTopicConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put("field.name", "");
         final ExtractTopicConfig config = new ExtractTopicConfig(props);
-        assertThat(config.fieldName()).isNotPresent();
+        assertThat(config.field()).isNotPresent();
     }
 
     @Test
@@ -56,6 +57,6 @@ class ExtractTopicConfigTest {
         final Map<String, String> props = new HashMap<>();
         props.put("field.name", "test");
         final ExtractTopicConfig config = new ExtractTopicConfig(props);
-        assertThat(config.fieldName()).hasValue("test");
+        assertThat(config.field().map(CursorField::getCursor)).hasValue("test");
     }
 }
