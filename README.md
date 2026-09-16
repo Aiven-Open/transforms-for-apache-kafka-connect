@@ -260,6 +260,47 @@ transforms.copyKey.key.fields=*
 
 Kafka Connect allows a transformation to be applied conditionally by attaching a [predicate](https://kafka.apache.org/43/kafka-connect/user-guide/#predicates). This collection provides the following predicates.
 
+### `Sandbox`
+
+This transformation runs user-supplied code against each record inside a sandbox, so the
+transformation logic is supplied as *configuration* — a path to a WebAssembly module, or an image to
+run — instead of as a JAR that has to be installed on every worker's `plugin.path`. The guest can be
+written in any language that compiles to one of those targets.
+
+Note that this does not change Kafka's trust model: the plugin itself still runs with the worker's
+privileges, and installing it is an act of trust like any other plugin. What it changes is that
+changing the *guest* is a connector configuration change rather than a `plugin.path` change and a
+worker restart.
+
+Two runtimes are built in:
+
+| | `wasm` (default) | `sbx` |
+|---|---|---|
+| boundary | WebAssembly in the worker JVM | microVM with its own kernel |
+| bounds memory | yes | yes |
+| bounds CPU | **no** | yes |
+| blocks syscalls | yes, no host imports are supplied | yes |
+| deploys as | a plain JAR, anywhere | needs a Docker Sandboxes engine |
+
+`wasm` cannot bound CPU: a guest that loops forever holds the Connect task thread, and a Java thread
+cannot be safely killed. Use `sbx`, which has its own scheduler, when that matters.
+
+The guest receives one JSON envelope per record and answers with exactly one of `{"value": ...}`,
+`{"drop": true}`, or `{"error": "..."}`. Adding `"topic"` to a value response routes the record
+elsewhere. Tombstones are passed through untouched.
+
+Here is an example of this transformation configuration:
+
+```properties
+transforms=Sandbox
+transforms.Sandbox.type=io.aiven.kafka.connect.transforms.sandbox.SandboxTransform
+transforms.Sandbox.sandbox.provider=wasm
+transforms.Sandbox.sandbox.module=/opt/transforms/redact.wasm
+```
+
+Further runtimes can be added by third-party JARs through `ServiceLoader`, by implementing
+`io.aiven.kafka.connect.transforms.sandbox.SandboxProvider`.
+
 ### `FieldValueMatches`
 
 This predicate is satisfied when a field in the record value equals an expected value or matches a regular expression. The field is addressed using Kafka Connect's [field path syntax](https://kafka.apache.org/documentation/#connect_transforms) (see `field.syntax.version`). Both schema-based (Avro) and schemaless (e.g. JSON) values are supported. If the field is empty, the whole value is considered.
