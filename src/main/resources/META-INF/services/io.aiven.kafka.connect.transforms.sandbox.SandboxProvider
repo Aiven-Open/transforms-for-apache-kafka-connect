@@ -1,0 +1,2 @@
+io.aiven.kafka.connect.transforms.sandbox.WasmSandboxProvider
+io.aiven.kafka.connect.transforms.sandbox.SbxSandboxProvider
